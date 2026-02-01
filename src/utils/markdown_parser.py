@@ -42,29 +42,8 @@ def parse_wechat_to_md(url):
 
         soup = BeautifulSoup(resp.text, 'html.parser')
 
-        # ================= 1. 提取元数据 =================
-
-        # 标题
-        title_tag = soup.find(id="activity-name")
-        title = title_tag.get_text(strip=True) if title_tag else "无标题"
-
-        # 公众号名称
-        account_tag = soup.find(id="js_name")
-        account = account_tag.get_text(strip=True) if account_tag else "未知公众号"
-
-        # 提取时间
-        date_str = ""
-        scripts = soup.find_all("script")
-        for script in scripts:
-            if script.string and "ct =" in script.string:
-                match = re.search(r'ct\s*=\s*"(\d+)"', script.string)
-                if match:
-                    import time
-                    ts = int(match.group(1))
-                    date_str = time.strftime("%Y-%m-%d %H:%M", time.localtime(ts))
-                    break
-
-        # ================= 2. 提取正文 =================
+        # ================= 提取正文 =================
+        # 元数据（title, account, date_str, url）由调用方从 article dict 或 JSON 获取
 
         content_div = soup.find('div', {'id': 'js_content'})
         if not content_div:
@@ -128,19 +107,9 @@ def parse_wechat_to_md(url):
         # 再次清理多余空行
         body_md = re.sub(r'\n{3,}', '\n\n', body_md)
 
-        # ================= 3. 组装最终输出 =================
-
-        final_output = f"""# {title}
-
-**来源**: {account}
-**时间**: {date_str}
-**链接**: {url}
-
----
-
-{body_md}
-"""
-        return final_output
+        # 元数据（title, account, date_str, url）由调用方从 article dict 或 JSON 获取
+        # 此处只返回文章正文内容，避免与 JSON metadata 和 LLM prompt 重复
+        return body_md
 
     except Exception as e:
         print(f"    ❌ 解析异常: {e}")

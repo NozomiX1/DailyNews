@@ -16,8 +16,12 @@ fakeid_cache.json
 
 # Data & Output
 data/
-output/
+# output/  # Allow output folder to be committed
 HF_Paper_Downloads/
+*.log
+
+# Archive folders
+_archive_*/
 
 # IDE
 .vscode/

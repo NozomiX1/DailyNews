@@ -4,9 +4,18 @@ from pathlib import Path
 
 # ================= 项目路径 =================
 PROJECT_ROOT = Path(__file__).parent
-DATA_DIR = PROJECT_ROOT / "data" / "articles"
+DATA_DIR = PROJECT_ROOT / "data"
+SUMMARIES_DIR = DATA_DIR / "summaries"
 OUTPUT_DIR = PROJECT_ROOT / "output"
+LOGS_DIR = PROJECT_ROOT / "logs"
 CACHE_DIR = PROJECT_ROOT
+
+# 按日期组织的子目录名称
+DATE_DIR_ARTICLES = "articles"     # {date}/articles/
+DATE_DIR_TRENDING = "trending"     # {date}/trending/
+DATE_DIR_PAPERS = "papers"         # {date}/papers/
+DATE_DIR_PDF_DOWNLOADS = "pdf_downloads"  # {date}/papers/pdf_downloads/
+DATE_DIR_README_FILES = "readme_files"  # {date}/trending/readme_files/
 
 # ================= 微信爬取配置 =================
 
@@ -23,7 +32,7 @@ def load_cookie():
         raise FileNotFoundError("❌ 找不到 cookie1.txt 文件")
 
 # 微信管理平台 Token
-TOKEN = "1987896076"
+TOKEN = "164005766"
 
 # Cookie
 COOKIE = load_cookie()
@@ -51,7 +60,7 @@ APP_SECRET = "28f082df74ed1b78163c8df2e9e8906b"
 COVER_MEDIA_ID = "eczXpKmOOMk1jO1pgqsdcSf22OGzinl4vNpgd_68ZSmv0qrD_aMbB2LdUEByVor_"
 
 # 代理配置（用于微信公众号 API，绕过 IP 白名单限制）
-# 设置为 None 则不使用代理，设置为 "http://127.0.0.1:1082" 使用本地代理
+# 设置为 None 则不使用代理
 PROXIES = {
     "http": "http://127.0.0.1:1082",
     "https": "http://127.0.0.1:1082",
