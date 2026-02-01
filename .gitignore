@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.so
+.Python
+*.egg-info/
+
+# System
+.DS_Store
+Thumbs.db
+
+# Sensitive data
+cookie1.txt
+fakeid_cache.json
+
+# Data & Output
+data/
+output/
+HF_Paper_Downloads/
+
+# IDE
+.vscode/
+.claude/
+
+# Misc
+*.pdf
