@@ -945,7 +945,7 @@ class WechatPublisher(BasePublisher):
 
         # 找到所有分析文件 (排除 _summary.md)
         analysis_files = [
-            f for f in output_dir.glob("*_analysis.md")
+            f for f in output_dir.glob("papers/papers_note_*.md")
             if not f.name.startswith('_')
         ]
 

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import List, Dict, Any
 
 from .base import BaseFetcher
-from ..utils import PaperRanker
+from ..utils import PaperRanker, retry_on_request_error, retry_on_http_error
 
 
 class PapersFetcher(BaseFetcher):
@@ -24,6 +24,24 @@ class PapersFetcher(BaseFetcher):
         import re
         return re.sub(r'[\\/*?:"<>|]', "", name).strip()
 
+    @retry_on_http_error(max_retries=3)
+    def _download_pdf(self, pdf_url: str, file_path: Path) -> bool:
+        """下载单个PDF文件"""
+        resp = requests.get(
+            pdf_url,
+            headers={"User-Agent": "Mozilla/5.0"},
+            stream=True,
+            timeout=60
+        )
+        resp.raise_for_status()
+
+        with open(file_path, 'wb') as f:
+            for chunk in resp.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+        return True
+
+    @retry_on_request_error(max_retries=3)
     def fetch_papers_from_huggingface(self, target_date: str) -> List[Dict]:
         """
         从 HuggingFace API 获取论文列表
@@ -38,13 +56,11 @@ class PapersFetcher(BaseFetcher):
 
         print(f"  📡 获取论文列表: {target_date}")
         resp = requests.get(url, headers=self.headers, timeout=30)
-
-        if resp.status_code != 200:
-            raise Exception(f"API 请求失败 ({resp.status_code}): {url}")
+        resp.raise_for_status()
 
         papers = resp.json()
         if not papers:
-            raise Exception(f"当日无数据: {target_date}")
+            raise ValueError(f"当日无数据: {target_date}")
 
         print(f"  ✅ 获取到 {len(papers)} 篇论文")
 
@@ -205,24 +221,11 @@ class PapersFetcher(BaseFetcher):
             pdf_url = f"https://arxiv.org/pdf/{arxiv_id}.pdf"
             try:
                 print(f"    [{i}/{len(items_to_download)}] ⬇️ {arxiv_id}...")
-                resp = requests.get(
-                    pdf_url,
-                    headers={"User-Agent": "Mozilla/5.0"},
-                    stream=True,
-                    timeout=60
-                )
-                if resp.status_code == 200:
-                    with open(file_path, 'wb') as f:
-                        for chunk in resp.iter_content(chunk_size=8192):
-                            if chunk:
-                                f.write(chunk)
-                    file_size = file_path.stat().st_size
-                    stats['success'] += 1
-                    print(f"       ✓ {file_size:,} bytes")
-                    time.sleep(3)  # ArXiv 限制
-                else:
-                    stats['failed'] += 1
-                    print(f"       ✗ HTTP {resp.status_code}")
+                self._download_pdf(pdf_url, file_path)
+                file_size = file_path.stat().st_size
+                stats['success'] += 1
+                print(f"       ✓ {file_size:,} bytes")
+                time.sleep(3)  # ArXiv 限制
             except Exception as e:
                 stats['failed'] += 1
                 print(f"       ✗ 错误: {e}")

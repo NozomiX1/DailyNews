@@ -6,10 +6,13 @@ from markdownify import markdownify as md
 import re
 from pathlib import Path
 import sys
+from typing import Optional
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 import config
+
+from .retry import retry_on_request_error
 
 # 沿用配置中的 Headers
 HEADERS = {
@@ -18,7 +21,8 @@ HEADERS = {
 }
 
 
-def parse_wechat_to_md(url):
+@retry_on_request_error(max_retries=3)
+def parse_wechat_to_md(url: str) -> Optional[str]:
     """
     下载微信文章并转换为 Markdown
 

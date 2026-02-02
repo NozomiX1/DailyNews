@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 from pathlib import Path
 
 from .base import BaseFetcher
+from ..utils import retry_on_request_error, retry_on_http_error
 
 
 class GithubTrendingFetcher(BaseFetcher):
@@ -21,6 +22,15 @@ class GithubTrendingFetcher(BaseFetcher):
                           '(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
 
+    @retry_on_http_error(max_retries=3)
+    def _download_readme(self, url: str, output_path: Path) -> bool:
+        """下载单个README文件"""
+        resp = requests.get(url, headers=self.headers, timeout=30)
+        resp.raise_for_status()
+        output_path.write_text(resp.text, encoding='utf-8')
+        return True
+
+    @retry_on_request_error(max_retries=3)
     def scrape_github_trending(self, since: str = 'daily', language: str = '') -> List[Dict]:
         """
         Scrape GitHub Trending data.
@@ -38,12 +48,8 @@ class GithubTrendingFetcher(BaseFetcher):
 
         params = {'since': since}
 
-        try:
-            response = requests.get(base_url, headers=self.headers, params=params, timeout=30)
-            response.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            print(f"  ❌ Request failed: {e}")
-            return []
+        response = requests.get(base_url, headers=self.headers, params=params, timeout=30)
+        response.raise_for_status()
 
         soup = BeautifulSoup(response.text, 'html.parser')
         repos = []
@@ -211,15 +217,15 @@ class GithubTrendingFetcher(BaseFetcher):
             for branch, readme_filename in patterns:
                 url = f"https://raw.githubusercontent.com/{owner}/{repo_name}/{branch}/{readme_filename}"
                 try:
+                    # 先检查文件是否存在（不重试）
                     resp = requests.head(url, headers=self.headers, timeout=10)
                     if resp.status_code == 200:
-                        # 下载内容
-                        content = requests.get(url, headers=self.headers, timeout=30).text
-                        output_path.write_text(content, encoding='utf-8')
+                        # 下载内容（带重试）
+                        self._download_readme(url, output_path)
                         stats['success'] += 1
                         downloaded = True
                         break
-                except:
+                except requests.exceptions.RequestException:
                     continue
 
             if not downloaded:

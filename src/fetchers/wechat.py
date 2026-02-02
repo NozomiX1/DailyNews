@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 
 from .base import BaseFetcher
-from ..utils import parse_wechat_to_md
+from ..utils import parse_wechat_to_md, retry_on_request_error
 import config
 
 
@@ -55,6 +55,7 @@ class WechatFetcher(BaseFetcher):
 
         return fakeid
 
+    @retry_on_request_error(max_retries=3)
     def _get_fakeid(self, name):
         """搜索公众号，获取其 fakeid"""
         url = f"{config.BASE_URL}/cgi-bin/searchbiz"
@@ -90,6 +91,7 @@ class WechatFetcher(BaseFetcher):
 
     # ================= 文章爬取 =================
 
+    @retry_on_request_error(max_retries=3)
     def _get_published_articles(self, fakeid, page=0):
         """获取已发布文章列表"""
         url = f"{config.BASE_URL}/cgi-bin/appmsgpublish"
