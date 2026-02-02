@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper Note | Daily AI Intelligence</title>
+
+    <link rel="stylesheet" href="https://s1.hdslb.com/bfs/static/jinkela/long/font/HarmonyOS_Sans_SC.css" />
+
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* --- 核心变量 --- */
+        :root {
+            --bg-color: #F5F7FA;
+            --text-color: #1F2937;
+            --accent-color: #2563EB;
+            --secondary-text: #64748B;
+            --line-color: #E2E8F0;
+            --font-stack: 'HarmonyOS Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-stack);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        [v-cloak] { display: none; }
+
+        h1, h2, h3, h4, button { font-family: var(--font-stack); }
+        h1, h2, h3 { font-weight: 700; letter-spacing: -0.02em; }
+
+        /* --- 纹理背景 --- */
+        .grain-overlay {
+            position: fixed; inset: 0; pointer-events: none; z-index: 9999; opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* --- Markdown 样式 --- */
+        .markdown-body { color: #334155; font-size: 15px; line-height: 1.8; font-family: var(--font-stack); }
+        .markdown-body h1 { font-size: 1.8rem; border-bottom: 1px solid var(--line-color); padding-bottom: 0.5rem; margin-top: 1.5rem; color: #111; }
+        .markdown-body h2 { font-size: 1.4rem; border-left: 4px solid var(--accent-color); padding-left: 10px; margin-top: 2rem; color: #1f2937; }
+        .markdown-body h3 { font-size: 1.2rem; margin-top: 1.5rem; color: #1f2937; font-weight: 600; }
+        .markdown-body h4 { font-size: 1.1rem; margin-top: 1.2rem; color: #4b5563; font-weight: 600; }
+        .markdown-body p { margin-bottom: 1rem; }
+        .markdown-body ul, .markdown-body ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        .markdown-body li { margin-bottom: 0.5rem; }
+        .markdown-body a { color: var(--accent-color); text-decoration: none; border-bottom: 1px dashed var(--accent-color); }
+        .markdown-body a:hover { border-bottom-style: solid; background-color: rgba(37, 99, 235, 0.05); }
+        .markdown-body pre { background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px; overflow-x: auto; font-family: 'SF Mono', 'Monaco', monospace; margin: 1rem 0; font-size: 14px; }
+        .markdown-body code { background-color: #f1f5f9; padding: 0.2em 0.4em; border-radius: 4px; font-family: 'SF Mono', 'Monaco', monospace; color: #ef4444; border: 1px solid #e5e7eb; font-size: 0.9em; }
+        .markdown-body pre code { background: transparent; border: none; color: inherit; padding: 0; }
+        .markdown-body blockquote { border-left: 4px solid var(--line-color); padding-left: 1rem; color: var(--secondary-text); background: #fff; padding: 0.5rem 1rem; margin: 1rem 0; border-radius: 0 8px 8px 0; }
+        .markdown-body hr { border: none; border-top: 1px solid var(--line-color); margin: 2rem 0; }
+        .markdown-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        .markdown-body th, .markdown-body td { border: 1px solid var(--line-color); padding: 0.5rem 1rem; text-align: left; }
+        .markdown-body th { background: #f8fafc; font-weight: 600; }
+        .markdown-body img { max-width: 100%; border-radius: 8px; margin: 1rem 0; }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 1.5rem; }
+        }
+    </style>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js",
+        "marked": "https://unpkg.com/marked/lib/marked.esm.js"
+      }
+    }
+    </script>
+</head>
+<body>
+    <div class="grain-overlay"></div>
+
+    <div id="app" class="min-h-screen py-8 px-4 sm:px-8 max-w-[860px] mx-auto" v-cloak>
+
+        <!-- 返回按钮 -->
+        <div class="mb-6">
+            <a href="index.html" class="inline-flex items-center gap-2 text-[var(--accent-color)] hover:underline font-medium">
+                ← 返回首页
+            </a>
+        </div>
+
+        <!-- 标题区 -->
+        <div v-if="title" class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">{{ title }}</h1>
+            <div class="text-sm text-[var(--secondary-text)] mt-2">{{ metaInfo }}</div>
+        </div>
+
+        <!-- 加载状态 -->
+        <div v-if="loading" class="py-24 flex flex-col items-center justify-center text-[var(--secondary-text)]">
+            <div class="animate-spin rounded-full h-10 w-10 border-[3px] border-t-[var(--accent-color)] border-gray-200 mb-4"></div>
+            <p class="font-medium">Loading Paper Note...</p>
+        </div>
+
+        <!-- 错误状态 -->
+        <div v-else-if="error" class="p-6 bg-red-50 text-red-800 rounded-xl">
+            <div class="flex items-center gap-2 mb-2 font-bold text-lg">⚠️ 加载失败</div>
+            <p>{{ error }}</p>
+            <p class="mt-3 text-sm">
+                请确保文件路径正确：<code class="bg-white px-2 py-1 rounded">./output/{{ date }}/papers/papers_note_{{ id }}.md</code>
+            </p>
+        </div>
+
+        <!-- Markdown 内容 -->
+        <div v-else class="bg-white rounded-xl border border-[var(--line-color)] shadow-sm p-6 md:p-10">
+            <div class="markdown-body" v-html="content"></div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { createApp, ref, computed, onMounted } from 'vue';
+        import { marked } from 'marked';
+
+        // 配置 marked 选项
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
+        const app = createApp({
+            setup() {
+                const loading = ref(true);
+                const content = ref('');
+                const title = ref('');
+                const error = ref('');
+                const date = ref('');
+                const id = ref('');
+
+                const metaInfo = computed(() => {
+                    if (!date.value || !id.value) return '';
+                    return `ArXiv ID: ${id.value} | Date: ${date.value}`;
+                });
+
+                onMounted(async () => {
+                    const params = new URLSearchParams(window.location.search);
+                    date.value = params.get('date') || '';
+                    id.value = params.get('id') || '';
+
+                    if (!date.value || !id.value) {
+                        error.value = '缺少参数：date 和 id';
+                        loading.value = false;
+                        return;
+                    }
+
+                    try {
+                        const url = `./output/${date.value}/papers/papers_note_${id.value}.md?t=${Date.now()}`;
+                        const res = await fetch(url);
+                        if (!res.ok) throw new Error('文件不存在');
+
+                        // 使用 TextDecoder 确保 UTF-8 解码
+                        const buffer = await res.arrayBuffer();
+                        const decoder = new TextDecoder('utf-8');
+                        const text = decoder.decode(buffer);
+
+                        // 提取标题（第一个 # 标题）
+                        const titleMatch = text.match(/^#\s+(.+)$/m);
+                        if (titleMatch) {
+                            title.value = titleMatch[1];
+                        } else {
+                            title.value = `Paper Note ${id.value}`;
+                        }
+
+                        content.value = marked.parse(text);
+                    } catch (e) {
+                        error.value = `无法加载文件：${e.message}`;
+                    }
+                    loading.value = false;
+                });
+
+                return { loading, content, title, error, date, id, metaInfo };
+            }
+        });
+        app.mount('#app');
+    </script>
+</body>
+</html>

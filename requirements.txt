@@ -9,3 +9,6 @@ lxml>=5.0.0
 
 # HTML 转 Markdown
 markdownify>=0.11.6
+
+# Gemini API (LLM 总结与分析)
+google-generativeai>=0.3.0
