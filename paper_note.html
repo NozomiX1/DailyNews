@@ -3,12 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paper Note | Daily AI Intelligence</title>
+    <title>Paper Note | Event Horizon</title>
 
     <link rel="stylesheet" href="https://s1.hdslb.com/bfs/static/jinkela/long/font/HarmonyOS_Sans_SC.css" />
 
+    <!-- KaTeX for LaTeX rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
     <style>
         /* --- 核心变量 --- */
@@ -48,7 +53,13 @@
         .markdown-body h4 { font-size: 1.1rem; margin-top: 1.2rem; color: #4b5563; font-weight: 600; }
         .markdown-body p { margin-bottom: 1rem; }
         .markdown-body ul, .markdown-body ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        .markdown-body ul { list-style-type: disc; }
+        .markdown-body ol { list-style-type: decimal; }
+        /* 嵌套列表样式 */
+        .markdown-body ul ul { list-style-type: circle; margin-top: 0.5rem; }
+        .markdown-body ul ul ul { list-style-type: square; }
         .markdown-body li { margin-bottom: 0.5rem; }
+        .markdown-body li > ul, .markdown-body li > ol { margin-top: 0.5rem; }
         .markdown-body a { color: var(--accent-color); text-decoration: none; border-bottom: 1px dashed var(--accent-color); }
         .markdown-body a:hover { border-bottom-style: solid; background-color: rgba(37, 99, 235, 0.05); }
         .markdown-body pre { background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px; overflow-x: auto; font-family: 'SF Mono', 'Monaco', monospace; margin: 1rem 0; font-size: 14px; }
@@ -116,7 +127,7 @@
     </div>
 
     <script type="module">
-        import { createApp, ref, computed, onMounted } from 'vue';
+        import { createApp, ref, computed, onMounted, nextTick } from 'vue';
         import { marked } from 'marked';
 
         // 配置 marked 选项
@@ -168,11 +179,62 @@
                             title.value = `Paper Note ${id.value}`;
                         }
 
-                        content.value = marked.parse(text);
+                        // 保护 LaTeX 公式，避免 marked 破坏格式
+                        const latexPlaceholders = [];
+                        let protectedText = text.replace(/\$\$([\s\S]+?)\$\$/g, (match, formula) => {
+                            const placeholder = `##LATEX-BLOCK-${latexPlaceholders.length}##`;
+                            latexPlaceholders.push(`$$${formula}$$`);
+                            return placeholder;
+                        });
+                        protectedText = protectedText.replace(/\$([^\$\n]+?)\$/g, (match, formula) => {
+                            const placeholder = `##LATEX-INLINE-${latexPlaceholders.length}##`;
+                            latexPlaceholders.push(`$${formula}$`);
+                            return placeholder;
+                        });
+
+                        let html = marked.parse(protectedText);
+
+                        // 恢复 LaTeX 公式
+                        html = html.replace(/##LATEX-(BLOCK|INLINE)-(\d+)##/g, (match, type, index) => {
+                            return latexPlaceholders[parseInt(index)];
+                        });
+
+                        content.value = html;
+
+                        // 先设置 loading 为 false，让 DOM 渲染
+                        loading.value = false;
+
+                        // 渲染 LaTeX 公式
+                        const renderLatex = () => {
+                            const element = document.querySelector('.markdown-body');
+                            if (element && window.renderMathInElement) {
+                                renderMathInElement(element, {
+                                    delimiters: [
+                                        {left: '$$', right: '$$', display: true},
+                                        {left: '$', right: '$', display: false}
+                                    ],
+                                    throwOnError: false
+                                });
+                            }
+                        };
+
+                        // 等待 DOM 渲染和 KaTeX 加载
+                        await nextTick();
+                        if (window.renderMathInElement) {
+                            renderLatex();
+                        } else {
+                            const checkKatex = setInterval(() => {
+                                if (window.renderMathInElement) {
+                                    clearInterval(checkKatex);
+                                    renderLatex();
+                                }
+                            }, 100);
+                            setTimeout(() => clearInterval(checkKatex), 5000);
+                        }
                     } catch (e) {
                         error.value = `无法加载文件：${e.message}`;
+                        loading.value = false;
                     }
-                    loading.value = false;
                 });
 
                 return { loading, content, title, error, date, id, metaInfo };

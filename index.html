@@ -3,12 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily AI Intelligence | HarmonyOS Edition</title>
+    <title>Event Horizon</title>
     
     <link rel="stylesheet" href="https://s1.hdslb.com/bfs/static/jinkela/long/font/HarmonyOS_Sans_SC.css" />
-    
+
+    <!-- KaTeX for LaTeX rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     
     <style>
         /* --- 核心变量 --- */
@@ -44,11 +49,28 @@
         .markdown-body { color: #334155; font-size: 15px; line-height: 1.8; font-family: var(--font-stack); }
         .markdown-body h1 { font-size: 1.8rem; border-bottom: 1px solid var(--line-color); padding-bottom: 0.5rem; margin-top: 1.5rem; color: #111; }
         .markdown-body h2 { font-size: 1.4rem; border-left: 4px solid var(--accent-color); padding-left: 10px; margin-top: 2rem; color: #1f2937; }
+        .markdown-body h3 { font-size: 1.2rem; margin-top: 1.5rem; color: #1f2937; font-weight: 600; }
+        .markdown-body h4 { font-size: 1.1rem; margin-top: 1.2rem; color: #4b5563; font-weight: 600; }
+        .markdown-body p { margin-bottom: 1rem; }
+        .markdown-body ul, .markdown-body ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        .markdown-body ul { list-style-type: disc; }
+        .markdown-body ol { list-style-type: decimal; }
+        /* 嵌套列表样式 */
+        .markdown-body ul ul { list-style-type: circle; margin-top: 0.5rem; }
+        .markdown-body ul ul ul { list-style-type: square; }
+        .markdown-body li { margin-bottom: 0.5rem; }
+        .markdown-body li > ul, .markdown-body li > ol { margin-top: 0.5rem; }
         .markdown-body a { color: var(--accent-color); text-decoration: none; border-bottom: 1px dashed var(--accent-color); }
         .markdown-body a:hover { border-bottom-style: solid; background-color: rgba(37, 99, 235, 0.05); }
         .markdown-body pre { background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px; overflow-x: auto; font-family: monospace; margin: 1rem 0; }
         .markdown-body code { background-color: #f1f5f9; padding: 0.2em 0.4em; border-radius: 4px; font-family: monospace; color: #ef4444; border: 1px solid #e5e7eb; }
-        .markdown-body blockquote { border-left: 4px solid var(--line-color); padding-left: 1rem; color: var(--secondary-text); background: #fff; padding: 0.5rem 1rem; margin: 1rem 0; }
+        .markdown-body pre code { background: transparent; border: none; color: inherit; padding: 0; }
+        .markdown-body blockquote { border-left: 4px solid var(--line-color); padding-left: 1rem; color: var(--secondary-text); background: #fff; padding: 0.5rem 1rem; margin: 1rem 0; border-radius: 0 8px 8px 0; }
+        .markdown-body hr { border: none; border-top: 1px solid var(--line-color); margin: 2rem 0; }
+        .markdown-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        .markdown-body th, .markdown-body td { border: 1px solid var(--line-color); padding: 0.5rem 1rem; text-align: left; }
+        .markdown-body th { background: #f8fafc; font-weight: 600; }
+        .markdown-body img { max-width: 100%; border-radius: 8px; margin: 1rem 0; }
 
         /* --- 日历组件覆盖样式 --- */
         .el-calendar { background: transparent; --el-calendar-border: none; }
@@ -120,7 +142,7 @@
             <div class="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-[var(--line-color)] pb-6 mb-8 gap-4">
                 <div>
                     <div class="text-xs font-bold uppercase tracking-widest text-[var(--accent-color)] mb-2">Est. 2026 — AI Log</div>
-                    <h1 class="text-3xl md:text-4xl text-gray-900 tracking-tight">Daily AI <span class="text-[var(--accent-color)]">Intelligence</span></h1>
+                    <h1 class="text-3xl md:text-4xl text-gray-900 tracking-tight">Event <span class="text-[var(--accent-color)]">Horizon</span></h1>
                 </div>
                 <div class="flex items-center gap-3">
                     <div class="text-xs px-3 py-1.5 rounded-full bg-white border border-[var(--line-color)] text-[var(--secondary-text)] font-medium">
@@ -309,7 +331,7 @@
         </main>
 
         <footer class="text-center text-[var(--secondary-text)] text-sm py-10 border-t border-[var(--line-color)]">
-            <p>&copy; 2026 AI Intelligence Daily. Powered by HarmonyOS Design.</p>
+            <p>&copy; 2026 Event Horizon</p>
         </footer>
 
     </div>
@@ -440,7 +462,27 @@
                     const fetchFile = async (url) => {
                         try {
                             const res = await fetch(url + `?t=${Date.now()}`); // 加上时间戳防缓存
-                            if (res.ok) return marked.parse(await res.text());
+                            if (res.ok) {
+                                let text = await res.text();
+                                // 保护 LaTeX 公式，避免 marked 破坏格式
+                                const latexPlaceholders = [];
+                                text = text.replace(/\$\$([\s\S]+?)\$\$/g, (match, formula) => {
+                                    const placeholder = `##LATEX-BLOCK-${latexPlaceholders.length}##`;
+                                    latexPlaceholders.push(`$$${formula}$$`);
+                                    return placeholder;
+                                });
+                                text = text.replace(/\$([^\$\n]+?)\$/g, (match, formula) => {
+                                    const placeholder = `##LATEX-INLINE-${latexPlaceholders.length}##`;
+                                    latexPlaceholders.push(`$${formula}$`);
+                                    return placeholder;
+                                });
+                                let html = marked.parse(text);
+                                // 恢复 LaTeX 公式
+                                html = html.replace(/##LATEX-(BLOCK|INLINE)-(\d+)##/g, (match, type, index) => {
+                                    return latexPlaceholders[parseInt(index)];
+                                });
+                                return html;
+                            }
                         } catch (e) {}
                         return null;
                     };
@@ -467,9 +509,39 @@
 
                     loading.value = false;
 
-                    // 数据加载完后，初始化动画
+                    // 数据加载完后，初始化动画和渲染 LaTeX
                     nextTick(() => {
-                        if (hasAnyData.value) setupIntersectionObserver();
+                        if (hasAnyData.value) {
+                            setupIntersectionObserver();
+                            // 渲染 LaTeX 公式
+                            const renderLatex = () => {
+                                document.querySelectorAll('.markdown-body').forEach(el => {
+                                    if (el.offsetParent !== null) { // 只渲染可见元素
+                                        renderMathInElement(el, {
+                                            delimiters: [
+                                                {left: '$$', right: '$$', display: true},
+                                                {left: '$', right: '$', display: false},
+                                                {left: '\\(', right: '\\)', display: false},
+                                                {left: '\\[', right: '\\]', display: true}
+                                            ],
+                                            throwOnError: false
+                                        });
+                                    }
+                                });
+                            };
+                            // 等待 KaTeX 加载
+                            if (window.renderMathInElement) {
+                                renderLatex();
+                            } else {
+                                const checkKatex = setInterval(() => {
+                                    if (window.renderMathInElement) {
+                                        clearInterval(checkKatex);
+                                        renderLatex();
+                                    }
+                                }, 100);
+                                setTimeout(() => clearInterval(checkKatex), 5000);
+                            }
+                        }
                     });
                 };
 
