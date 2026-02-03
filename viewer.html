@@ -3,10 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document Viewer | Daily AI Intelligence</title>
+    <title>Document Viewer | Event Horizon</title>
 
     <link rel="stylesheet" href="https://s1.hdslb.com/bfs/static/jinkela/long/font/HarmonyOS_Sans_SC.css" />
+    <!-- KaTeX for LaTeX rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
     <style>
         /* --- 核心变量 --- */
@@ -46,7 +50,13 @@
         .markdown-body h4 { font-size: 1.1rem; margin-top: 1.2rem; color: #4b5563; font-weight: 600; }
         .markdown-body p { margin-bottom: 1rem; }
         .markdown-body ul, .markdown-body ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        .markdown-body ul { list-style-type: disc; }
+        .markdown-body ol { list-style-type: decimal; }
+        /* 嵌套列表样式 */
+        .markdown-body ul ul { list-style-type: circle; margin-top: 0.5rem; }
+        .markdown-body ul ul ul { list-style-type: square; }
         .markdown-body li { margin-bottom: 0.5rem; }
+        .markdown-body li > ul, .markdown-body li > ol { margin-top: 0.5rem; }
         .markdown-body a { color: var(--accent-color); text-decoration: none; border-bottom: 1px dashed var(--accent-color); }
         .markdown-body a:hover { border-bottom-style: solid; background-color: rgba(37, 99, 235, 0.05); }
         .markdown-body pre { background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px; overflow-x: auto; font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace; margin: 1rem 0; font-size: 14px; }
@@ -58,6 +68,16 @@
         .markdown-body th, .markdown-body td { border: 1px solid var(--line-color); padding: 0.5rem 1rem; text-align: left; }
         .markdown-body th { background: #f8fafc; font-weight: 600; }
         .markdown-body img { max-width: 100%; border-radius: 8px; margin: 1rem 0; }
+
+        /* 目录样式 */
+        .toc-item a {
+            display: block;
+            padding: 0.25rem 0.5rem;
+            border-left: 2px solid transparent;
+        }
+        .toc-level-2 { padding-left: 0; }
+        .toc-level-3 { padding-left: 1rem; }
+        .toc-level-4 { padding-left: 2rem; }
 
         /* 文章卡片样式 */
         .article-card {
@@ -124,10 +144,10 @@
 <body>
     <div class="grain-overlay"></div>
 
-    <div id="app" class="min-h-screen py-8 px-4 sm:px-8 max-w-[860px] mx-auto" v-cloak>
+    <div id="app" class="min-h-screen py-8 px-4 sm:px-8" v-cloak>
 
         <!-- 返回按钮 -->
-        <div class="mb-6 flex items-center justify-between">
+        <div class="max-w-[1400px] mx-auto mb-6 flex items-center justify-between">
             <a href="index.html" class="inline-flex items-center gap-2 text-[var(--accent-color)] hover:underline font-medium">
                 ← 返回首页
             </a>
@@ -141,7 +161,7 @@
         </div>
 
         <!-- 错误状态 -->
-        <div v-else-if="error" class="p-6 bg-red-50 text-red-800 rounded-xl">
+        <div v-else-if="error" class="max-w-[860px] mx-auto p-6 bg-red-50 text-red-800 rounded-xl">
             <div class="flex items-center gap-2 mb-2 font-bold text-lg">⚠️ 加载失败</div>
             <p>{{ error }}</p>
             <p class="mt-3 text-sm">
@@ -149,15 +169,37 @@
             </p>
         </div>
 
-        <!-- Markdown 内容 -->
-        <div v-else class="bg-white rounded-xl border border-[var(--line-color)] shadow-sm p-6 md:p-10">
-            <div class="markdown-body" v-html="content"></div>
+        <!-- 主内容区：左侧文章 + 右侧大纲 -->
+        <div v-else class="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
+            <!-- 左侧：Markdown 内容 -->
+            <div class="bg-white rounded-xl border border-[var(--line-color)] shadow-sm p-6 md:p-10">
+                <div class="markdown-body" v-html="content" id="markdown-content"></div>
+            </div>
+
+            <!-- 右侧：大纲 -->
+            <div v-if="toc.length > 0" class="hidden lg:block">
+                <div class="sticky top-8 bg-white rounded-xl border border-[var(--line-color)] shadow-sm p-5">
+                    <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">目录</h3>
+                    <ul class="space-y-2 text-sm overflow-y-auto max-h-[calc(100vh-200px)] pr-2">
+                        <li v-for="item in toc" :key="item.id" :class="['toc-item', `toc-level-${item.level}`]">
+                            <a :href="`#${item.id}`" @click.prevent="scrollToHeading(item.id)"
+                               :class="[
+                                   'block py-1 px-2 rounded transition-colors',
+                                   'hover:bg-gray-100',
+                                   activeHeading === item.id ? 'bg-blue-50 text-[var(--accent-color)] font-medium' : 'text-gray-600'
+                               ]">
+                                {{ item.text }}
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
     </div>
 
     <script type="module">
-        import { createApp, ref, computed, onMounted } from 'vue';
+        import { createApp, ref, computed, onMounted, nextTick } from 'vue';
         import { marked } from 'marked';
 
         // 配置 marked 选项
@@ -173,6 +215,74 @@
                 const error = ref('');
                 const filePath = ref('');
                 const fileName = ref('');
+                const toc = ref([]);
+                const activeHeading = ref('');
+
+                // 滚动到指定标题
+                const scrollToHeading = (id) => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        activeHeading.value = id;
+                    }
+                };
+
+                // 生成目录
+                const generateTOC = () => {
+                    const container = document.getElementById('markdown-content');
+                    if (!container) return;
+
+                    const headings = container.querySelectorAll('h2, h3, h4');
+                    const tocItems = [];
+                    headings.forEach((heading, index) => {
+                        const id = `heading-${index}`;
+                        heading.id = id;
+                        tocItems.push({
+                            id: id,
+                            text: heading.textContent.trim(),
+                            level: parseInt(heading.tagName.charAt(1))
+                        });
+                    });
+                    toc.value = tocItems;
+                };
+
+                // 监听滚动，更新当前激活的标题
+                const setupScrollSpy = () => {
+                    const handleScroll = () => {
+                        const headings = document.querySelectorAll('.markdown-body h2, .markdown-body h3, .markdown-body h4');
+
+                        // 从下往上找第一个在视口上方或进入视口的标题
+                        let found = false;
+                        for (let i = headings.length - 1; i >= 0; i--) {
+                            const heading = headings[i];
+                            const rectTop = heading.getBoundingClientRect().top;
+                            if (rectTop < 100) {
+                                if (activeHeading.value !== heading.id) {
+                                    activeHeading.value = heading.id;
+                                    // 将目录中的当前项滚动到可视区域
+                                    nextTick(() => {
+                                        const tocItem = document.querySelector(`.toc-item a[href="#${heading.id}"]`);
+                                        if (tocItem) {
+                                            tocItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                        }
+                                    });
+                                }
+                                found = true;
+                                break;
+                            }
+                        }
+
+                        // 如果没找到，说明滚到顶部了
+                        if (!found && headings.length > 0) {
+                            activeHeading.value = headings[0].id;
+                        }
+                    };
+
+                    console.log('Adding scroll listener, TOC items:', toc.value.length);
+                    window.addEventListener('scroll', handleScroll, { passive: true });
+                    // 初始化
+                    setTimeout(handleScroll, 100);
+                };
 
                 onMounted(async () => {
                     const params = new URLSearchParams(window.location.search);
@@ -200,9 +310,27 @@
                         // 确保以 UTF-8 解码
                         const buffer = await res.arrayBuffer();
                         const decoder = new TextDecoder('utf-8');
-                        const text = decoder.decode(buffer);
+                        let text = decoder.decode(buffer);
+
+                        // 保护 LaTeX 公式，避免 marked 破坏格式
+                        const latexPlaceholders = [];
+                        text = text.replace(/\$\$([\s\S]+?)\$\$/g, (match, formula) => {
+                            const placeholder = `##LATEX-BLOCK-${latexPlaceholders.length}##`;
+                            latexPlaceholders.push(`$$${formula}$$`);
+                            return placeholder;
+                        });
+                        text = text.replace(/\$([^\$\n]+?)\$/g, (match, formula) => {
+                            const placeholder = `##LATEX-INLINE-${latexPlaceholders.length}##`;
+                            latexPlaceholders.push(`$${formula}$`);
+                            return placeholder;
+                        });
 
                         let html = marked.parse(text);
+
+                        // 恢复 LaTeX 公式
+                        html = html.replace(/##LATEX-(BLOCK|INLINE)-(\d+)##/g, (match, type, index) => {
+                            return latexPlaceholders[parseInt(index)];
+                        });
 
                         // 如果是 papers_summary.md，为每篇论文插入"查看详细笔记"链接
                         if (path.includes('papers_summary.md')) {
@@ -218,13 +346,51 @@
                         }
 
                         content.value = html;
+
+                        // 先设置 loading 为 false，让 DOM 渲染
+                        loading.value = false;
+
+                        // 渲染 LaTeX 公式
+                        const renderLatex = () => {
+                            const element = document.querySelector('.markdown-body');
+                            if (element && window.renderMathInElement) {
+                                renderMathInElement(element, {
+                                    delimiters: [
+                                        {left: '$$', right: '$$', display: true},
+                                        {left: '$', right: '$', display: false}
+                                    ],
+                                    throwOnError: false,
+                                    strict: false,
+                                    trust: true
+                                });
+                            }
+                        };
+
+                        // 等待 DOM 渲染和 KaTeX 加载
+                        await nextTick();
+
+                        // 生成目录
+                        generateTOC();
+                        setupScrollSpy();
+
+                        if (window.renderMathInElement) {
+                            renderLatex();
+                        } else {
+                            const checkKatex = setInterval(() => {
+                                if (window.renderMathInElement) {
+                                    clearInterval(checkKatex);
+                                    renderLatex();
+                                }
+                            }, 100);
+                            setTimeout(() => clearInterval(checkKatex), 5000);
+                        }
                     } catch (e) {
                         error.value = `无法加载文件：${e.message}`;
+                        loading.value = false;
                     }
-                    loading.value = false;
                 });
 
-                return { loading, content, error, filePath, fileName };
+                return { loading, content, error, filePath, fileName, toc, activeHeading, scrollToHeading };
             }
         });
         app.mount('#app');
