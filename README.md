@@ -9,8 +9,9 @@
 - **LLM 去重**：基于语义相似度的智能去重，避免重复内容
 - **智能打分**：自动识别广告文章，按来源优先级排序
 - **自动发布**：将生成的日报自动发布为微信公众号草稿
-- **论文深度分析**：支持下载 PDF 并使用 Gemini 进行深度分析
+- **论文深度分析**：支持下载 PDF 并使用 Gemini Pro High 进行深度分析
 - **灵活调度**：支持 cron 定时任务或手动指定日期运行
+- **缓存模式**：可选是否缓存 PDF 文件到本地
 
 ## 目录结构
 
@@ -19,19 +20,15 @@ DailyNews/
 ├── main.py                 # 主入口，命令行接口
 ├── config.py              # 配置文件
 ├── requirements.txt       # Python 依赖
-├── cookie1.txt            # 微信认证 Cookie（需自行配置）
-├── prompt.md              # 论文分析提示词模板
 │
 ├── src/
 │   ├── fetchers/          # 数据爬取模块
-│   │   ├── __init__.py
 │   │   ├── base.py        # 基础爬虫类
 │   │   ├── wechat.py      # 微信公众号爬虫
 │   │   ├── github_trending.py  # GitHub Trending 爬虫
 │   │   └── papers.py      # HuggingFace 论文爬虫
 │   │
 │   ├── summarizers/       # AI 总结模块
-│   │   ├── __init__.py
 │   │   ├── base.py        # 基础总结器
 │   │   ├── gemini_client.py  # Gemini API 客户端
 │   │   ├── article_summarizer.py  # 文章总结器
@@ -39,40 +36,53 @@ DailyNews/
 │   │   └── paper_summarizer.py    # 论文总结器
 │   │
 │   ├── processors/        # 数据处理模块
-│   │   ├── __init__.py
 │   │   ├── llm_deduplicator.py  # LLM 去重
 │   │   ├── llm_scorer.py        # 广告识别打分
 │   │   └── formatter.py         # Markdown 格式化
 │   │
 │   ├── publishers/        # 发布模块
-│   │   ├── __init__.py
 │   │   ├── base.py        # 基础发布器
 │   │   └── wechat.py      # 微信公众号发布
 │   │
+│   ├── tasks/             # 任务编排模块
+│   │   ├── base.py        # 基础任务类
+│   │   ├── wechat.py      # 微信文章任务
+│   │   ├── github.py      # GitHub Trending 任务
+│   │   ├── papers.py      # 论文汇总任务
+│   │   └── paper_analysis.py  # 论文深度分析任务
+│   │
 │   └── utils/             # 工具模块
-│       ├── __init__.py
 │       ├── paper_ranker.py    # 论文排序算法
 │       └── markdown_parser.py # Markdown 解析
 │
 ├── prompts/               # AI 提示词模板
-│   ├── __init__.py
-│   ├── base.py
-│   ├── article.py
-│   ├── deduplication.py
-│   ├── github.py
-│   ├── paper.py
-│   ├── paper_summary.py
-│   └── scoring.py
+│   ├── base.py            # 抽象基类
+│   ├── article.py         # 文章总结提示词
+│   ├── deduplication.py   # 去重提示词
+│   ├── github.py          # GitHub 项目提示词
+│   ├── paper.py           # 论文深度分析提示词
+│   ├── paper_summary.py   # 论文汇总提示词
+│   └── scoring.py         # 打分提示词
 │
 ├── scripts/               # 辅助脚本
 │   ├── test_paper_summary.py
 │   ├── test_paper_note.py
 │   └── publish_to_draft.py
 │
-├── data/                  # 数据存储目录
-│   └── summaries/         # AI 总结结果（按日期组织）
+├── data/                  # 数据缓存目录
+│   └── YYYY-MM-DD/        # 按日期组织
+│       ├── articles/      # 微信文章缓存
+│       ├── trending/      # GitHub Trending 缓存
+│       └── papers/        # 论文元数据和 PDF 缓存
+│           └── pdf_downloads/  # PDF 文件（缓存模式下）
 │
-├── output/                # Markdown 输出目录（按日期组织）
+├── output/                # Markdown 输出目录
+│   └── YYYY-MM-DD/        # 按日期组织
+│       ├── daily_report.md
+│       ├── github_trending.md
+│       ├── papers_summary.md
+│       └── papers/        # 论文详细笔记
+│           └── papers_note_*.md
 │
 └── logs/                  # 日志文件目录
 ```
@@ -92,23 +102,14 @@ cd DailyNews
 pip install -r requirements.txt
 ```
 
-### 3. 配置 Cookie
-
-在项目根目录创建 `cookie1.txt` 文件，填入微信公众号管理平台的 Cookie：
-
-1. 登录 [微信公众号管理平台](https://mp.weixin.qq.com)
-2. 打开浏览器开发者工具（F12）
-3. 复制完整的 Cookie 字符串
-4. 粘贴到 `cookie1.txt` 文件中
-
-**注意**：Cookie 会定期过期，需要重新更新。
-
-### 4. 配置 Gemini API
+### 3. 配置 Gemini API
 
 编辑 `src/summarizers/gemini_client.py`，设置你的 Gemini API 配置：
 
-- `api_key`: Gemini API 密钥
-- `api_endpoint`: API 端点（支持代理）
+```python
+api_key = 'your-api-key'
+api_endpoint = 'http://127.0.0.1:8045'  # 或官方端点
+```
 
 ## 配置说明
 
@@ -116,10 +117,11 @@ pip install -r requirements.txt
 
 | 配置项 | 说明 |
 |--------|------|
-| `TARGET_ACCOUNTS` | 目标公众号列表（默认：机器之心、新智元、量子位） |
+| `ENABLE_CACHE` | 是否缓存 PDF 文件到本地（默认 False） |
+| `TARGET_ACCOUNTS` | 目标公众号列表 |
 | `APP_ID` / `APP_SECRET` | 微信公众号凭证 |
 | `COVER_MEDIA_ID` | 永久封面图 Media ID |
-| `PROXIES` | 代理配置（用于绕过 IP 白名单限制） |
+| `PROXIES` | 代理配置 |
 | `AD_KEYWORDS` | 广告识别关键词列表 |
 
 ## 使用方法
@@ -127,65 +129,42 @@ pip install -r requirements.txt
 ### 基本用法
 
 ```bash
-# 运行默认策略（公众号/GitHub 今天，论文昨天）
+# 运行所有任务（今天的数据）
 python main.py
 
 # 指定日期运行
-python main.py 2026-02-01
+python main.py --date 2026-02-01
 
-# 只运行到格式化阶段，不发布
-python main.py --dry-run
-```
-
-### 单独运行各阶段
-
-```bash
-# 只爬取数据
-python main.py --fetch-only
-
-# 只总结数据（从 JSON 加载已爬取的数据）
-python main.py --summarize-only
+# 只运行指定任务
+python main.py --wechat --github --paper
 ```
 
 ### 论文深度分析
 
 ```bash
-# 运行论文深度分析流程（下载 PDF + Gemini 分析）
-python main.py --analyze-papers
+# 运行论文深度分析（下载 PDF + Gemini Pro High 分析）
+python main.py --analyze
 
-# 指定日期和论文数量
-python main.py --analyze-papers --date 2026-01-30 --min-papers 5 --max-papers 15
-
-# 启用兴趣加成
-python main.py --analyze-papers --topic-bonus
+# 指定论文数量
+python main.py --analyze --paper-num 10
 
 # 分析完成后发布为草稿
-python main.py --analyze-papers --publish-papers
+python main.py --analyze --paper-num 5 --publish
 ```
+
+**缓存模式说明**：
+- `ENABLE_CACHE = False`（默认）：PDF 不保存到本地，直接从内存分析
+- `ENABLE_CACHE = True`：PDF 保存到 `data/{date}/papers/pdf_downloads/`，下次复用
 
 ### 定时任务配置
 
 使用 cron 每天晚上 11 点自动运行：
 
 ```bash
-# 编辑 crontab
 crontab -e
 
 # 添加以下行
 0 23 * * * cd /path/to/DailyNews && /usr/bin/python3 main.py >> logs/cron.log 2>&1
-```
-
-## 日志查看
-
-```bash
-# 查看最新日志
-tail -f logs/cron.log
-
-# 查看今天的输出文件
-ls -la output/$(date +%Y-%m-%d)/
-
-# 查看今天的 AI 总结
-ls -la data/summaries/$(date +%Y-%m-%d)/
 ```
 
 ## 输出文件
@@ -195,13 +174,14 @@ ls -la data/summaries/$(date +%Y-%m-%d)/
 - `daily_report.md` - 公众号文章日报
 - `github_trending.md` - GitHub Trending 报告
 - `papers_summary.md` - 论文汇总报告
+- `papers/papers_note_*.md` - 论文详细笔记（--analyze 模式）
 
 ## 注意事项
 
-1. **Cookie 过期**：微信 Cookie 会定期失效，需要重新从浏览器复制
-2. **API 限流**：Gemini API 有速率限制，建议在请求间设置适当延迟
-3. **代理配置**：如需访问微信公众号 API，可能需要配置代理
-4. **日期策略**：论文榜单默认使用"昨天"的日期（因为 HuggingFace 只显示昨天数据）
+1. **API 限流**：Gemini API 有速率限制，建议在请求间设置适当延迟
+2. **代理配置**：如需访问微信公众号 API，可能需要配置代理
+3. **日期策略**：论文榜单默认使用"今天"的日期
+4. **周末跳过**：ArXiv 周末不发布新论文，analyze 模式会自动跳过
 
 ## License
 

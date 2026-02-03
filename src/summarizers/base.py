@@ -56,6 +56,12 @@ class BaseSummarizer(ABC):
             data: List of summary dictionaries
             output_path: Path to output JSON file
         """
+        import config
+
+        if not config.ENABLE_CACHE:
+            print(f"      📋 无缓存模式，跳过保存 JSON")
+            return
+
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 

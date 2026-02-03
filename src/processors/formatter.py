@@ -53,7 +53,7 @@ class MarkdownFormatter:
                 f"**价值**: {stars} **标签**: {tags}",
                 f"**链接**: {article.get('url', '')}",
                 "",
-                f"**摘要**: {article.get('summary', '')}",
+                article.get('summary', ''),  # 直接显示摘要内容，不加前缀
                 "",
                 "---",
                 ""
@@ -87,15 +87,21 @@ class MarkdownFormatter:
 
         for i, repo in enumerate(repos, 1):
             name = repo.get('name', repo.get('name', 'unknown'))
-            owner = repo.get('owner', '')
+            category = repo.get('category', '')
             language = repo.get('language', 'N/A')
             stars = repo.get('total_stars', repo.get('stars', '0'))
             today_stars = repo.get('today_stars', repo.get('stars_period', '0'))
             url = repo.get('url', '')
 
+            # Title line with category
+            if category:
+                title_line = f"**分类**: {category} | **语言**: {language} | **Stars**: {stars} | **今日**: +{today_stars}"
+            else:
+                title_line = f"**语言**: {language} | **Stars**: {stars} | **今日**: +{today_stars}"
+
             lines.extend([
                 f"### {i}. {name}",
-                f"**语言**: {language} | **Stars**: {stars} | **今日**: +{today_stars}",
+                title_line,
                 f"**链接**: {url}",
                 "",
             ])
@@ -110,6 +116,22 @@ class MarkdownFormatter:
             tech_stack = repo.get('tech_stack', [])
             if tech_stack:
                 lines.append(f"**技术栈**: {', '.join(tech_stack)}")
+                lines.append("")
+
+            # Add use cases if available
+            use_cases = repo.get('use_cases', [])
+            if use_cases:
+                lines.append("**使用场景**:")
+                for case in use_cases:
+                    lines.append(f"- {case}")
+                lines.append("")
+
+            # Add highlights if available
+            highlights = repo.get('highlights', [])
+            if highlights:
+                lines.append("**亮点**:")
+                for highlight in highlights:
+                    lines.append(f"- {highlight}")
                 lines.append("")
 
             lines.append("---")
@@ -202,12 +224,17 @@ class MarkdownFormatter:
 
     def save(self, content: str, output_path: str) -> None:
         """
-        Save formatted content to file.
+        Save formatted content to file (always saves, even in no-cache mode).
 
         Args:
             content: Formatted Markdown content
             output_path: Path to output file
+
+        Note:
+            Output files are always saved for user reference.
+            Only data/summaries JSON files are skipped in no-cache mode.
         """
+
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 

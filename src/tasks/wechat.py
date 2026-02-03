@@ -90,8 +90,10 @@ class WechatArticleTask(BaseTask):
 
         # Summarize
         print(f"\n[2/4] 公众号文章总结...")
+        import config
         summaries_dir = self.project_root / "data" / "summaries" / date
-        summaries_dir.mkdir(parents=True, exist_ok=True)
+        if config.ENABLE_CACHE:
+            summaries_dir.mkdir(parents=True, exist_ok=True)
 
         summaries = self.summarizer.summarize_batch(
             items,
@@ -108,6 +110,9 @@ class WechatArticleTask(BaseTask):
         )
         after_count = len(cleaned)
         print(f"  ✅ 去重完成: {before_count} → {after_count}")
+
+        # Print JSON preview
+        self.print_json_preview(cleaned, preview_count=3)
 
         return cleaned
 

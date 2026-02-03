@@ -108,8 +108,12 @@ class LLMDeduplicator:
 
             # Save results to JSON if output_path is provided
             if output_path:
-                with open(output_path, 'w', encoding='utf-8') as f:
-                    json.dump(deduplicated, f, ensure_ascii=False, indent=2)
+                import config
+                if config.ENABLE_CACHE:
+                    with open(output_path, 'w', encoding='utf-8') as f:
+                        json.dump(deduplicated, f, ensure_ascii=False, indent=2)
+                else:
+                    print(f"      📋 无缓存模式，跳过保存 deduplicated JSON")
 
             return deduplicated
 

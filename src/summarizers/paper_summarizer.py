@@ -25,11 +25,15 @@ class PaperSummarizer(BaseSummarizer):
             load_full_prompt: Whether to load full prompt (for PDF analysis). Default False.
         """
         super().__init__(client)
-        self.prompt = PaperPrompt(prompt_path)
-        # Only load full prompt when needed (for PDF analysis)
-        self.full_prompt = self.prompt.get_full_prompt_from_file() if load_full_prompt else None
+        # Only initialize PaperPrompt when needed (for PDF analysis)
+        # This avoids the abstract method error in --paper lightweight mode
+        self.prompt = PaperPrompt() if load_full_prompt else None
+        self.full_prompt = None
         # Lightweight prompt for summary-only processing
         self.summary_prompt = PaperSummaryPrompt()
+        # Load full prompt if requested
+        if load_full_prompt and self.prompt:
+            self.full_prompt = self.prompt.get_system_prompt()
 
     def summarize(self, content: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """

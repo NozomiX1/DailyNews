@@ -130,9 +130,11 @@ class PapersTask(BaseTask):
             return []
 
         print(f"\n[2/3] 生成论文中文摘要...")
+        import config
 
         summaries_dir = self.project_root / "data" / "summaries" / date / "papers"
-        summaries_dir.mkdir(parents=True, exist_ok=True)
+        if config.ENABLE_CACHE:
+            summaries_dir.mkdir(parents=True, exist_ok=True)
 
         # Use summarize_batch_from_summary (lightweight, no PDF)
         summaries = self.summarizer.summarize_batch_from_summary(
@@ -140,6 +142,9 @@ class PapersTask(BaseTask):
             delay=1.0,
             output_path=str(summaries_dir / "papers.json")
         )
+
+        # Print JSON preview
+        self.print_json_preview(summaries, preview_count=3)
 
         print(f"  ✅ 论文数据已保存 ({len(summaries)} 篇)")
         return summaries

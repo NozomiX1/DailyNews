@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .base import BaseFetcher
 from ..utils import retry_on_request_error, retry_on_http_error
+import config
 
 
 class GithubTrendingFetcher(BaseFetcher):
@@ -27,7 +28,8 @@ class GithubTrendingFetcher(BaseFetcher):
         """下载单个README文件"""
         resp = requests.get(url, headers=self.headers, timeout=30)
         resp.raise_for_status()
-        output_path.write_text(resp.text, encoding='utf-8')
+        if config.ENABLE_CACHE:
+            output_path.write_text(resp.text, encoding='utf-8')
         return True
 
     @retry_on_request_error(max_retries=3)
@@ -124,6 +126,7 @@ class GithubTrendingFetcher(BaseFetcher):
         repos = self._load_from_json(date, since)
         if repos:
             print(f"  ✅ 从本地加载 {len(repos)} 个热门项目")
+            self._print_data_preview(repos, "GitHub Trending")
             return repos
 
         # 否则从网页抓取
@@ -140,7 +143,32 @@ class GithubTrendingFetcher(BaseFetcher):
             repo['date'] = date
             repo['since'] = since
 
+        # Print data preview
+        self._print_data_preview(repos, "GitHub Trending")
+
         return repos
+
+    def _print_data_preview(self, items: List[Dict], title: str):
+        """打印第一条数据预览"""
+        if not items:
+            return
+
+        print(f"\n📋 {title} - 数据预览 (第1条):")
+        print("-" * 50)
+
+        # 打印 JSON 预览
+        first_item = items[0]
+        preview_json = json.dumps(
+            first_item,
+            ensure_ascii=False,
+            indent=2
+        )
+        preview_lines = preview_json.split('\n')
+        for line in preview_lines[:15]:  # 前15行
+            print(line)
+        if len(preview_lines) > 15:
+            print("... (省略)")
+        print("-" * 50)
 
     def _load_from_json(self, date: str, since: str = 'daily') -> List[Dict]:
         """Load repos from local JSON file if exists."""
@@ -157,6 +185,10 @@ class GithubTrendingFetcher(BaseFetcher):
 
     def save_raw_data(self, items: List[Dict], date: str, since: str = 'daily') -> Path:
         """Save trending data to JSON cache."""
+        if not config.ENABLE_CACHE:
+            print(f"      📋 无缓存模式，跳过保存 trending JSON")
+            return None
+
         # 新路径: data/{date}/trending/
         dir_path = self.data_dir / date / "trending"
         dir_path.mkdir(parents=True, exist_ok=True)
@@ -178,6 +210,10 @@ class GithubTrendingFetcher(BaseFetcher):
         Returns:
             下载统计字典 {'success': 成功数, 'skipped': 跳过数, 'failed': 失败数}
         """
+        if not config.ENABLE_CACHE:
+            print(f"      📋 无缓存模式，跳过下载 README")
+            return {'success': 0, 'skipped': len(repos), 'failed': 0}
+
         # 新路径: data/{date}/trending/readme_files/
         if date is None:
             from datetime import datetime

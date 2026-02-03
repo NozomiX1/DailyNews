@@ -61,8 +61,7 @@ class PaperAnalysisTask(BaseTask):
         self.max_papers = max_papers
 
         # Load analysis prompt from PaperPrompt
-        paper_prompt = PaperPrompt()
-        self.prompt = paper_prompt.get_full_prompt_from_file()
+        self.prompt = PaperPrompt().get_system_prompt()
 
     def should_skip(self, date: str) -> bool:
         """
@@ -151,8 +150,12 @@ class PaperAnalysisTask(BaseTask):
         """
         print(f"\n[2/4] 下载 PDF...")
 
-        download_dir = self.project_root / "data" / date / "papers" / "pdf_downloads"
-        download_dir.mkdir(parents=True, exist_ok=True)
+        import config
+        if config.ENABLE_CACHE:
+            download_dir = self.project_root / "data" / date / "papers" / "pdf_downloads"
+            download_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            download_dir = None  # Not used in non-cache mode
 
         downloaded_files = []
 
@@ -170,11 +173,20 @@ class PaperAnalysisTask(BaseTask):
             pdf_url = f"https://arxiv.org/pdf/{arxiv_id}.pdf"
             safe_title = re.sub(r'[\\/*?:"<>|]', "", title).strip()
             filename = f"{arxiv_id}_{safe_title[:80]}.pdf"
-            file_path = download_dir / filename
 
-            if file_path.exists():
-                print(f"    [已存在] {filename}")
-            else:
+            # Determine file path and check for existing cache
+            file_path = None
+            pdf_data = None
+            from_cache = False
+
+            if config.ENABLE_CACHE:
+                file_path = download_dir / filename
+                if file_path.exists():
+                    print(f"    [已缓存] {filename}")
+                    from_cache = True
+
+            # Download if not cached
+            if not from_cache:
                 try:
                     print(f"    [下载中] {filename}...")
                     r = requests.get(
@@ -184,13 +196,15 @@ class PaperAnalysisTask(BaseTask):
                         timeout=60
                     )
                     if r.status_code == 200:
-                        with open(file_path, 'wb') as f:
-                            for chunk in r.iter_content(chunk_size=8192):
-                                if chunk:
-                                    f.write(chunk)
-                        file_size = file_path.stat().st_size
-                        print(f"    [完成] {file_size:,} bytes")
-                        time.sleep(3)  # ArXiv rate limit
+                        # Read PDF data into memory
+                        pdf_data = r.content
+                        print(f"    [完成] {len(pdf_data):,} bytes")
+
+                        # Save to cache if enabled
+                        if config.ENABLE_CACHE and file_path:
+                            with open(file_path, 'wb') as f:
+                                f.write(pdf_data)
+                            time.sleep(3)  # ArXiv rate limit
                     else:
                         print(f"    [失败] HTTP {r.status_code}")
                         continue
@@ -199,7 +213,8 @@ class PaperAnalysisTask(BaseTask):
                     continue
 
             downloaded_files.append({
-                "pdf_path": file_path,
+                "pdf_path": str(file_path) if file_path else filename,
+                "pdf_data": pdf_data,  # Has data if newly downloaded, None if from cache
                 "arxiv_id": arxiv_id,
                 "title": title,
                 "org": p.get("organization", {}).get("fullname", ""),
@@ -236,10 +251,19 @@ class PaperAnalysisTask(BaseTask):
             print(f"\n  论文 {i}/{len(items)}")
 
             try:
-                result = self.client.upload_and_analyze(
-                    str(paper_info["pdf_path"]),
-                    self.prompt
-                )
+                # Use pdf_data if available (non-cache mode), otherwise read from file
+                pdf_data = paper_info.get("pdf_data")
+                if pdf_data:
+                    result = self.client.analyze_pdf_bytes(
+                        paper_info["pdf_path"],
+                        self.prompt,
+                        pdf_data=pdf_data
+                    )
+                else:
+                    result = self.client.upload_and_analyze(
+                        paper_info["pdf_path"],
+                        self.prompt
+                    )
 
                 # Save analysis result
                 arxiv_id = paper_info.get("arxiv_id", "unknown")
@@ -257,6 +281,7 @@ class PaperAnalysisTask(BaseTask):
                 content += "---\n\n"
                 content += result
 
+                # Always save paper notes for user reference
                 output_path.write_text(content, encoding='utf-8')
                 print(f"  [保存] {filename}")
 

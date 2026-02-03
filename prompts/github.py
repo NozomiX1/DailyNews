@@ -7,46 +7,48 @@ from .base import BasePrompt
 
 
 class GithubPrompt(BasePrompt):
-    """Prompt for summarizing GitHub repositories."""
+    """Prompt for summarizing GitHub repositories with structured analysis."""
 
     def get_system_prompt(self) -> str:
-        return """你是一位开源项目专家，擅长快速理解项目价值和特点。
+        return """你是一位资深的 GitHub 趋势分析师和技术猎手。你的专长是透过复杂的 README 文档，精准提炼项目的核心价值、技术壁垒和应用前景。
 
-你的任务是分析 GitHub 项目的 README 或描述，生成结构化摘要。
+你的目标是将输入的 GitHub 项目信息转化为一份**结构化、高信噪比**的中文分析报告。
 
-**重要要求**：
-1. 必须返回纯 JSON 格式，不要包含任何其他文字
-2. 摘要要突出项目的核心价值和技术亮点
-3. 技术栈要准确，不要凭空猜测"""
+**核心原则**：
+1. **客观准确**：技术栈和功能必须基于提供的文本，严禁幻觉或臆测。
+2. **深度洞察**：不要只翻译简介，要解释"它解决了什么痛点"。
+3. **格式严格**：仅返回标准的 JSON 格式字符串，**严禁**使用 markdown 代码块（如 ```json ... ```），**严禁**包含任何 JSON 之外的开头或结尾文本。"""
 
     def get_user_prompt_template(self) -> str:
-        return """请分析以下 GitHub 项目，返回 JSON 格式：
+        return """请根据以下提供的 GitHub 项目信息和 README 内容，生成一份 JSON 格式的分析报告。
 
-{{
-  "name": "项目名称（保持原样）",
-  "summary": "100-200字中文摘要：核心功能、技术特点、适用场景",
-  "tech_stack": ["技术栈1", "技术栈2"],  // 从 README 中提取的主要技术
-  "use_cases": ["适用场景1", "适用场景2"],  // 典型使用场景
-  "is_worthy": true  // 是否值得推荐（true/false）
-}}
+### 项目元数据
+- 名称：{name}
+- 语言：{language}
+- Stars：{stars} (今日新增: {today_stars})
+- 描述：{description}
+- 链接：{url}
 
-项目信息：
-名称：{name}
-描述：{description}
-语言：{language}
-Stars：{stars}
-今日新增：{today_stars}
-链接：{url}
-
-README 内容：
+### README 内容片段
 {readme_content}
 
-注意：
-1. 如果没有 README，仅基于描述进行判断
-2. 技术栈要从实际内容中提取，不要猜测
-3. 摘要要突出"为什么这个项目值得关注"
+---
 
-请只返回 JSON，不要包含任何解释性文字。"""
+### 输出要求
+请严格按照以下 JSON 结构返回数据（Key 必须保持不变）：
+
+{{
+  "name": "{name}",
+  "category": "项目领域（如：LLM工具/Web框架/DevOps/学习资料/其它）",
+  "summary": "150字以内的中文深度摘要。结构建议：1. 这是一个什么项目？ 2. 解决了什么具体痛点？ 3. 核心优势是什么？",
+  "tech_stack": ["关键技术1", "关键技术2"], // 仅提取最核心的语言、框架或库（最多5个）
+  "use_cases": ["场景1", "场景2"], // 用户会在什么情况下使用它？
+  "highlights": ["亮点1", "亮点2"], // 项目的杀手级功能或独特之处（简短）
+  "is_worthy": true, // 判断逻辑：Stars增长快 OR 文档完善 OR 解决了真实痛点 OR 业界关注度高
+  "recommendation_reason": "一句话推荐语（如果 is_worthy 为 false，则留空）"
+}}
+
+**再次提醒：只返回纯 JSON 字符串，不要包含 Markdown 格式标记。**"""
 
     def format_prompt_for_repo(
         self,

@@ -1,6 +1,7 @@
 # BaseTask Abstract Class
 # Define the standard lifecycle for all pipeline tasks
 from abc import ABC, abstractmethod
+import json
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
@@ -172,3 +173,25 @@ class BaseTask(ABC):
             if result.get("published"):
                 draft_id = result.get("draft_id", "")
                 print(f"     📤 草稿 ID: {draft_id}")
+
+    def print_json_preview(self, items: List[Dict[str, Any]], preview_count: int = 3) -> None:
+        """
+        打印 JSON 数据预览到控制台
+
+        Args:
+            items: 要打印的数据列表
+            preview_count: 打印前 N 条，默认 3
+        """
+        if not items:
+            return
+
+        count = min(len(items), preview_count)
+        print(f"\n{'='*60}")
+        print(f"📋 JSON 数据预览 (前 {count} 条):")
+        print(f"{'='*60}")
+
+        for i, item in enumerate(items[:count], 1):
+            print(f"\n--- [{i}/{count}] ---")
+            print(json.dumps(item, ensure_ascii=False, indent=2))
+
+        print(f"{'='*60}\n")

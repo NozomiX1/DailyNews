@@ -9,21 +9,25 @@ DailyNews Main Entry Point
 - 周末自动跳过论文爬取（arXiv 不发布）
 - GitHub Trending 只能爬取当天数据
 
+发布策略：
+- 不加 --publish（默认）：只生成 output/ 目录中的 Markdown 文件，不推送草稿
+- 加 --publish：生成文件 + 推送到微信公众号草稿箱
+
 Usage:
-    # 运行所有任务（默认今天）
-    python main.py
+    # 只生成输出文件，不推送（默认行为）
+    python main.py --wechat
 
-    # 运行指定日期的 WeChat 任务
+    # 生成文件 + 推送到草稿箱
+    python main.py --wechat --publish
+
+    # 运行论文深度分析 + 推送
+    python main.py --analyze --paper-num 5 --publish
+
+    # 多任务 + 推送
+    python main.py --wechat --github --paper --publish
+
+    # 运行指定日期的任务（不推送）
     python main.py --date 2026-02-02 --wechat
-
-    # 运行论文深度分析（默认今天，5篇论文）
-    python main.py --analyze --paper-num 5
-
-    # 运行多个任务
-    python main.py --date 2026-02-02 --wechat --github --paper
-
-    # 运行论文深度分析 + 指定日期
-    python main.py --analyze --date 2026-02-01 --paper-num 10
 """
 import sys
 import argparse
@@ -147,7 +151,7 @@ def run_paper_analysis_pipeline(
     print("=" * 80)
 
     # 初始化组件
-    client = GeminiClient()
+    client = GeminiClient(model="gemini-3-pro-high")
     output_dir = PROJECT_ROOT / "output" / target_date
 
     # 创建任务实例
@@ -166,7 +170,7 @@ def run_paper_analysis_pipeline(
     task.print_result(result)
 
     if dry_run:
-        print("\n[DRY RUN] 跳过实际下载和分析")
+        print("\n[DRY RUN] 跳过发布阶段")
         return result
 
     # 额外的汇总信息
@@ -186,20 +190,20 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # 运行所有任务（默认今天）
-  python main.py
+  # 只生成输出文件，不推送（默认行为）
+  python main.py --wechat
 
-  # 运行指定日期的 WeChat 任务
+  # 生成文件 + 推送到草稿箱
+  python main.py --wechat --publish
+
+  # 运行论文深度分析 + 推送
+  python main.py --analyze --paper-num 5 --publish
+
+  # 多任务 + 推送
+  python main.py --wechat --github --paper --publish
+
+  # 运行指定日期的任务（不推送）
   python main.py --date 2026-02-02 --wechat
-
-  # 运行论文深度分析（默认今天，5篇论文）
-  python main.py --analyze --paper-num 5
-
-  # 运行多个任务
-  python main.py --date 2026-02-02 --wechat --github --paper
-
-  # 运行论文深度分析 + 指定日期
-  python main.py --analyze --date 2026-02-01 --paper-num 10
         """
     )
 
@@ -235,6 +239,11 @@ Examples:
         default=5,
         help='论文分析任务时的论文数量（仅在 --analyze 时有效，默认5）'
     )
+    parser.add_argument(
+        '--publish',
+        action='store_true',
+        help='推送到微信公众号草稿箱（默认不推送）'
+    )
 
     args = parser.parse_args()
 
@@ -244,7 +253,7 @@ Examples:
             run_paper_analysis_pipeline(
                 target_date=args.date,
                 paper_num=args.paper_num,
-                dry_run=False
+                dry_run=not args.publish
             )
             return
 
@@ -272,7 +281,7 @@ Examples:
                 tasks_to_run.append('paper')
 
         # 主流程（爬取 → 总结 → 格式化 → 发布）
-        run_pipeline(date=target_date, tasks_to_run=tasks_to_run, dry_run=False)
+        run_pipeline(date=target_date, tasks_to_run=tasks_to_run, dry_run=not args.publish)
 
     except KeyboardInterrupt:
         print("\n\n⚠️ 用户中断")

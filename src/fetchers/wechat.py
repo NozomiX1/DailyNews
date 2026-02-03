@@ -34,8 +34,9 @@ class WechatFetcher(BaseFetcher):
 
     def _save_fakeid_cache(self, cache):
         """保存 fakeid 缓存"""
-        with open(self.fakeid_cache_file, "w", encoding="utf-8") as f:
-            json.dump(cache, f, ensure_ascii=False, indent=2)
+        if config.ENABLE_CACHE:
+            with open(self.fakeid_cache_file, "w", encoding="utf-8") as f:
+                json.dump(cache, f, ensure_ascii=False, indent=2)
 
     def _get_fakeid_with_cache(self, account_name):
         """获取公众号 fakeid，优先使用缓存"""
@@ -238,25 +239,31 @@ class WechatFetcher(BaseFetcher):
         md_content = parse_wechat_to_md(url)
 
         if md_content:
-            # 新路径: data/{date}/articles/
-            date_dir = self.data_dir / target_date / "articles"
-            date_dir.mkdir(parents=True, exist_ok=True)
+            filepath = None
+            if config.ENABLE_CACHE:
+                # 新路径: data/{date}/articles/
+                date_dir = self.data_dir / target_date / "articles"
+                date_dir.mkdir(parents=True, exist_ok=True)
 
-            filename = f"{account_name}_{index+1:03d}.md"
-            filepath = date_dir / filename
+                filename = f"{account_name}_{index+1:03d}.md"
+                filepath = date_dir / filename
 
-            with open(filepath, "w", encoding="utf-8") as f:
-                f.write(md_content)
+                with open(filepath, "w", encoding="utf-8") as f:
+                    f.write(md_content)
 
-            print(f"      💾 已保存: {filename}")
+                print(f"      💾 已保存: {filename}")
+            else:
+                print(f"      📋 无缓存模式，跳过保存")
+
             return {
                 "account": account_name,
                 "index": index + 1,
-                "filepath": str(filepath),
+                "filepath": str(filepath) if filepath else "",
                 "title": title,
                 "url": url,
                 "time_str": article_data.get('time_str', ''),
-                "timestamp": article_data.get('timestamp', 0)
+                "timestamp": article_data.get('timestamp', 0),
+                "content": md_content  # Always include content in memory
             }
         else:
             print(f"      ❌ 下载失败: {title}")
@@ -289,21 +296,54 @@ class WechatFetcher(BaseFetcher):
             for idx, article in enumerate(articles):
                 result = self._save_article_markdown(account_name, idx, article, date)
                 if result:
-                    # Read the saved content
-                    try:
-                        with open(result['filepath'], 'r', encoding='utf-8') as f:
-                            result['content'] = f.read()
-                    except:
-                        result['content'] = ''
+                    # Content is already included in result from _save_article_markdown
                     all_articles.append(result)
                 time.sleep(1)
 
-        print(f"\n✅ 爬取完成！共保存 {len(all_articles)} 篇文章")
+        print(f"\n✅ 爬取完成！共获取 {len(all_articles)} 篇文章")
+
+        # Print data preview
+        self._print_data_preview(all_articles, "微信文章")
 
         return all_articles
 
+    def _print_data_preview(self, items: list, title: str):
+        """打印第一条数据预览"""
+        if not items:
+            return
+
+        print(f"\n📋 {title} - 数据预览 (第1条):")
+        print("-" * 50)
+
+        # 打印 JSON 预览
+        first_item = items[0]
+        preview_dict = {k: v for k, v in first_item.items() if k != 'content'}
+        preview_json = json.dumps(
+            preview_dict,
+            ensure_ascii=False,
+            indent=2
+        )
+        preview_lines = preview_json.split('\n')
+        for line in preview_lines[:15]:  # 前15行
+            print(line)
+        if len(preview_lines) > 15:
+            print("... (省略)")
+        print("-" * 50)
+
+        # 打印 Markdown 预览
+        if 'content' in first_item and first_item['content']:
+            content = first_item['content']
+            print(f"\n📄 Markdown 预览 (前200字符):")
+            print("-" * 50)
+            print(content[:200] + "..." if len(content) > 200 else content)
+            print("-" * 50)
+
     def save_raw_data(self, items: list, date: str) -> Path:
         """Save raw article data (metadata only, content is saved separately)."""
+        if not config.ENABLE_CACHE:
+            print(f"      📋 无缓存模式，跳过保存 metadata")
+            return None
+
         # 新路径: data/{date}/articles/
         date_dir = self.data_dir / date / "articles"
         date_dir.mkdir(parents=True, exist_ok=True)

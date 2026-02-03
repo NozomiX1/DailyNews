@@ -96,18 +96,23 @@ class GithubTrendingTask(BaseTask):
 
         print(f"\n[2/3] GitHub 项目总结...")
         from ..summarizers import GithubSummarizer
+        import config
 
         # Create summarizer with date for README path
         self.summarizer = GithubSummarizer(self.client, date=date)
 
         summaries_dir = self.project_root / "data" / "summaries" / date
-        summaries_dir.mkdir(parents=True, exist_ok=True)
+        if config.ENABLE_CACHE:
+            summaries_dir.mkdir(parents=True, exist_ok=True)
 
         summaries = self.summarizer.summarize_batch(
             items,
             delay=0.5,
             output_path=str(summaries_dir / "trending.json")
         )
+
+        # Print JSON preview
+        self.print_json_preview(summaries, preview_count=3)
 
         return summaries
 

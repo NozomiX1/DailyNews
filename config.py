@@ -67,7 +67,8 @@ PROXIES = {
 }
 
 # ================= 缓存配置 =================
-
+# True=缓存模式(保存数据到data/), False=无缓存模式(仅内存流转)
+ENABLE_CACHE = False
 FAKEID_CACHE_FILE = PROJECT_ROOT / "fakeid_cache.json"
 
 # ================= 广告关键词 =================

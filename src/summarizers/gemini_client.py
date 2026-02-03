@@ -46,25 +46,29 @@ class GeminiClient:
     def analyze_pdf_bytes(
         self,
         pdf_path: str,
-        prompt: str
+        prompt: str,
+        pdf_data: bytes = None
     ) -> str:
         """
         Analyze a PDF file by reading it as bytes and passing to Gemini.
 
         Args:
-            pdf_path: Path to the PDF file
+            pdf_path: Path to the PDF file (for display/error message)
             prompt: Analysis prompt
+            pdf_data: Optional PDF bytes data (if provided, skips file read)
 
         Returns:
             The model's response text
         """
-        pdf_file = Path(pdf_path)
-        if not pdf_file.exists():
-            raise FileNotFoundError(f"PDF file not found: {pdf_path}")
-
-        print(f"  📄 Reading {pdf_file.name}...")
-        with open(pdf_path, 'rb') as f:
-            pdf_data = f.read()
+        if pdf_data is None:
+            pdf_file = Path(pdf_path)
+            if not pdf_file.exists():
+                raise FileNotFoundError(f"PDF file not found: {pdf_path}")
+            print(f"  📄 Reading {pdf_file.name}...")
+            with open(pdf_path, 'rb') as f:
+                pdf_data = f.read()
+        else:
+            print(f"  📄 Using PDF data from memory...")
 
         pdf_part = {
             'inline_data': {

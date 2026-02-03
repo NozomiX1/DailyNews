@@ -5,9 +5,11 @@ import requests
 from datetime import date, timedelta
 from pathlib import Path
 from typing import List, Dict, Any
+import json
 
 from .base import BaseFetcher
 from ..utils import PaperRanker, retry_on_request_error, retry_on_http_error
+import config
 
 
 class PapersFetcher(BaseFetcher):
@@ -27,6 +29,9 @@ class PapersFetcher(BaseFetcher):
     @retry_on_http_error(max_retries=3)
     def _download_pdf(self, pdf_url: str, file_path: Path) -> bool:
         """下载单个PDF文件"""
+        if not config.ENABLE_CACHE:
+            return True  # Skip download but return success
+
         resp = requests.get(
             pdf_url,
             headers={"User-Agent": "Mozilla/5.0"},
@@ -100,7 +105,34 @@ class PapersFetcher(BaseFetcher):
 
         print(f"  ✅ 完成，共 {len(ranked)} 篇")
 
-        return ranked[:max_papers]
+        result = ranked[:max_papers]
+
+        # Print data preview
+        self._print_data_preview(result, "HuggingFace Papers")
+
+        return result
+
+    def _print_data_preview(self, items: List[Dict], title: str):
+        """打印第一条数据预览"""
+        if not items:
+            return
+
+        print(f"\n📋 {title} - 数据预览 (第1条):")
+        print("-" * 50)
+
+        # 打印 JSON 预览
+        first_item = items[0]
+        preview_json = json.dumps(
+            first_item,
+            ensure_ascii=False,
+            indent=2
+        )
+        preview_lines = preview_json.split('\n')
+        for line in preview_lines[:15]:  # 前15行
+            print(line)
+        if len(preview_lines) > 15:
+            print("... (省略)")
+        print("-" * 50)
 
     def save_raw_data(self, items: List[Dict], date: str) -> Path:
         """
@@ -113,7 +145,9 @@ class PapersFetcher(BaseFetcher):
         Returns:
             保存的文件路径
         """
-        import json
+        if not config.ENABLE_CACHE:
+            print(f"      📋 无缓存模式，跳过保存 papers JSON")
+            return None
 
         # 新路径: data/{date}/papers/
         papers_dir = self.data_dir / date / "papers"
@@ -168,6 +202,10 @@ class PapersFetcher(BaseFetcher):
         Returns:
             下载统计字典 {'success': 成功数, 'skipped': 跳过数, 'failed': 失败数}
         """
+        if not config.ENABLE_CACHE:
+            print(f"      📋 无缓存模式，跳过下载 PDF")
+            return {'success': 0, 'skipped': len(items), 'failed': 0}
+
         import time
         import re
 
