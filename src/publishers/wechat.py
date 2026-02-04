@@ -136,13 +136,21 @@ class WechatPublisher(BasePublisher):
             meta_html = f'<div style="font-size: 13px; color: #888; margin-bottom: 10px; background: #f9f9f9; padding: 8px; border-radius: 4px;">{self._generate_meta_row(item, item_type)}</div>'
 
             summary = item.get('summary', '')
-            summary_text = summary.replace("\n", "<br>")
-            summary_html = f'<p style="font-size: 16px; color: #333; line-height: 1.6; text-align: justify; margin-bottom: 25px;">{summary_text}</p>'
+            # Use markdown conversion instead of simple newline replacement
+            summary_html = self._simple_markdown_to_html(summary)
+            summary_html = f'<div style="font-size: 16px; color: #333; line-height: 1.6; margin-bottom: 25px;">{summary_html}</div>'
 
-            # Add highlights section for papers
+            # Add highlights section for papers and use_cases/highlights for github
             highlights_html = ''
             if item_type == 'paper' and item.get('highlights'):
                 highlights_html = f'<div style="font-size: 14px; color: #666; background: #f0f7ff; padding: 10px; border-radius: 4px; margin-bottom: 25px; border-left: 3px solid #3498db;"><strong>✨ 亮点:</strong><br>{item["highlights"]}</div>'
+            elif item_type == 'github':
+                # Use cases section
+                if item.get('use_cases'):
+                    highlights_html += f'<div style="font-size: 14px; color: #666; background: #f0f7ff; padding: 10px; border-radius: 4px; margin-bottom: 10px; border-left: 3px solid #3498db;"><strong>🎯 使用场景:</strong><br>{item["use_cases"]}</div>'
+                # Highlights section
+                if item.get('highlights'):
+                    highlights_html += f'<div style="font-size: 14px; color: #666; background: #fff8e1; padding: 10px; border-radius: 4px; margin-bottom: 25px; border-left: 3px solid #f39c12;"><strong>✨ 亮点:</strong><br>{item["highlights"]}</div>'
 
             divider = '<hr style="border: 0; border-top: 1px dashed #ddd; margin: 20px 0;" />' if idx < len(items) else ""
             html_parts.append(title_html + meta_html + summary_html + highlights_html + divider)
@@ -188,9 +196,46 @@ class WechatPublisher(BasePublisher):
             tag_match = re.search(r'\*\*标签\*\*: (.+?)\n', article)
             tag = tag_match.group(1).strip() if tag_match else ""
 
-            summary_match = re.search(r'\*\*摘要\*\*: (.+?)(?:\n---|\n\n###|\Z)', article, re.DOTALL)
-            summary = summary_match.group(1).strip() if summary_match else ""
-            summary = re.sub(r'<br>', '\n', summary)
+            # Extract one-line summary from quote block format - preserve the label
+            summary_match = re.search(r'> 🎯 \*\*一句话摘要\*\*：(.+?)(?=\n|$)', article)
+            one_line_summary = summary_match.group(1).strip() if summary_match else ""
+
+            # Extract all content after the link (from quote block to separator)
+            # This captures: 一句话摘要 + 核心技术 + 实验数据 + 独家洞察 + 相关资源
+            # Use greedy match to capture all sections until --- or next ###
+            full_content_match = re.search(
+                r'> 🎯 \*\*一句话摘要\*\*：\s*(.+)(?=\n---|\n\n###)',
+                article,
+                re.DOTALL
+            )
+
+            # Build the full summary with all sections
+            full_summary = ""
+            if full_content_match and full_content_match.group(1):
+                full_content = full_content_match.group(1).strip()
+                # Convert markdown headers to readable text
+                # Note: The actual headers include the text after emoji, so we need to replace the entire header line
+                # Handle both with and without space after emoji
+                full_summary = re.sub(r'####\s+🔹\s*核心技术/实现逻辑', '\n\n#### **核心技术**', full_content, count=1)
+                full_summary = re.sub(r'####\s+📊\s*实验数据/关键结论', '\n\n#### **实验数据**', full_summary, count=1)
+                full_summary = re.sub(r'####\s+💡\s*独家洞察/局限性', '\n\n#### **独家洞察**', full_summary, count=1)
+                full_summary = re.sub(r'####\s+🔗\s*相关资源', '\n\n#### **相关资源**', full_summary, count=1)
+                # Clean up list items - convert markdown lists to proper markdown format with hyphens
+                full_summary = re.sub(r'^\u2022\s+', '- ', full_summary, flags=re.MULTILINE)  # bullet character
+                full_summary = re.sub(r'\n\u2022\s+', '\n- ', full_summary)  # bullet character after newline
+                full_summary = re.sub(r'^-\s+\*\*', '- **', full_summary, flags=re.MULTILINE)
+                full_summary = re.sub(r'\n-\s+\*\*', '\n- **', full_summary)
+                # Also handle items with * instead of -
+                full_summary = re.sub(r'\n\*\s+\*\*', '\n* **', full_summary)
+                full_summary = full_summary.strip()
+                # Preserve the "一句话摘要：" label (full_content already has the one-line summary, so just add label)
+                full_summary = f'**一句话摘要：**{full_summary}'
+
+            # If no detailed content, still preserve the label
+            if not full_summary and one_line_summary:
+                full_summary = f'**一句话摘要：**{one_line_summary}'
+
+            summary = full_summary if full_summary else (f'**一句话摘要：**{one_line_summary}' if one_line_summary else "")
 
             if title and source:
                 news_items.append({
@@ -237,11 +282,25 @@ class WechatPublisher(BasePublisher):
             url_match = re.search(r'\*\*链接\*\*: (.+?)\n', article)
             url = url_match.group(1).strip() if url_match else ""
 
-            # Extract tech stack (技术栈)
-            tech_stack_match = re.search(r'(?:\*\*技术栈\*\*|技术栈):\s*(.+?)(?:\n---|\n\n###|\Z)', article, re.DOTALL)
+            # Extract tech stack (技术栈) - stop at next section (next **)
+            tech_stack_match = re.search(r'(?:\*\*技术栈\*\*|技术栈):\s*(.+?)(?:\n\*\*|\n---|\n\n###|\Z)', article, re.DOTALL)
             tech_stack = tech_stack_match.group(1).strip() if tech_stack_match else ""
             # Clean up tech_stack text
             tech_stack = re.sub(r'\n+', ' ', tech_stack).strip()
+
+            # Extract use cases (使用场景)
+            use_cases_match = re.search(r'\*\*使用场景\*\*:\s*(.+?)(?:\n\*\*亮点\*\*|\n---|\n\n###|\Z)', article, re.DOTALL)
+            use_cases = use_cases_match.group(1).strip() if use_cases_match else ""
+            # Convert bullet points to clean text
+            use_cases = re.sub(r'^\s*-\s*', '• ', use_cases, count=1)
+            use_cases = re.sub(r'\n\s*-\s*', '<br>• ', use_cases)
+
+            # Extract highlights (亮点)
+            highlights_match = re.search(r'\*\*亮点\*\*:\s*(.+?)(?:\n---|\n\n###|\Z)', article, re.DOTALL)
+            highlights = highlights_match.group(1).strip() if highlights_match else ""
+            # Convert bullet points to clean text
+            highlights = re.sub(r'^\s*-\s*', '• ', highlights, count=1)
+            highlights = re.sub(r'\n\s*-\s*', '<br>• ', highlights)
 
             summary_match = re.search(r'\*\*摘要\*\*: (.+?)(?:\n---|\n\n###|\Z|(?:\*\*技术栈\*\*|技术栈):)', article, re.DOTALL)
             summary = summary_match.group(1).strip() if summary_match else ""
@@ -254,7 +313,9 @@ class WechatPublisher(BasePublisher):
                     'today_stars': today_stars,
                     'url': url,
                     'tech_stack': tech_stack,
-                    'summary': summary
+                    'summary': summary,
+                    'use_cases': use_cases,
+                    'highlights': highlights
                 })
 
         return items
@@ -422,8 +483,8 @@ class WechatPublisher(BasePublisher):
             content = f.read()
 
         items = []
-        # Split by "###" followed by number and dot
-        sections = re.split(r'\n###\s+(\d+)\.\s+', content)
+        # Split by "###" followed by optional emoji/chars, then number and dot
+        sections = re.split(r'\n###\s*[^0-9]*?(\d+)\.\s+', content)
 
         for i in range(1, len(sections), 2):
             if i + 1 >= len(sections):
@@ -585,6 +646,169 @@ class WechatPublisher(BasePublisher):
             'tags': tags.group(1).strip() if tags else '',
             'body': body
         }
+
+    def _simple_markdown_to_html(self, text: str) -> str:
+        """
+        轻量级 Markdown 转 HTML，用于 summary 格式化
+
+        处理:
+        - 四级标题 (####)
+        - 加粗 (**text**)
+        - 链接 ([text](url))
+        - 嵌套列表项 (- 或 * 开头, 根据缩进判断层级)
+        - 段落间距
+        """
+        if not text:
+            return ""
+
+        lines = text.split('\n')
+        result = []
+
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            stripped = line.strip()
+
+            # 跳过空行
+            if not stripped:
+                result.append('<br>')
+                i += 1
+                continue
+
+            # 处理四级标题
+            if stripped.startswith('#### '):
+                content = stripped[5:].strip()
+                # 处理标题中的加粗
+                content = re.sub(r'\*\*(.+?)\*\*', r'<strong style="color: #2c3e50; font-weight: 600;">\1</strong>', content)
+                result.append(f'<h4 style="font-size: 16px; font-weight: bold; color: #555; text-align: center; margin: 20px 0 12px; padding: 8px 0; border-top: 1px solid #e0e0e0; border-bottom: 1px solid #e0e0e0;">{content}</h4>')
+                i += 1
+                continue
+
+            # 检测列表项 (支持 markdown 格式和 bullet 字符)
+            list_match = re.match(r'^(\s*)([-*]|\u2022)\s+', line)
+            if list_match:
+                # 收集连续的列表项并构建嵌套结构
+                list_items = []
+                base_indent = None
+
+                while i < len(lines):
+                    line = lines[i]
+                    list_match = re.match(r'^(\s*)([-*]|\u2022)\s+', line)
+
+                    if not list_match:
+                        break
+
+                    indent_str = list_match.group(1)
+                    content_start = list_match.end()
+                    content = line[content_start:].rstrip()
+
+                    # 计算缩进层级 (每4个空格为一级)
+                    indent = len(indent_str)
+                    if base_indent is None:
+                        base_indent = indent
+
+                    # 计算相对层级 (0-based)
+                    level = 0
+                    if indent > base_indent:
+                        level = (indent - base_indent) // 4 + 1
+
+                    # 处理内联格式
+                    content = re.sub(r'\*\*(.+?)\*\*([：:、,，.。；;])', r'<strong style="color: #2c3e50; font-weight: 600;">\1\2</strong>', content)
+                    content = re.sub(r'\*\*([^*]+?)\*\*', r'<strong style="color: #2c3e50; font-weight: 600;">\1</strong>', content)
+                    content = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2" style="color: #3498db;">\1</a>', content)
+
+                    list_items.append({'level': level, 'content': content})
+                    i += 1
+
+                    # 检查下一行是否是列表的续行（缩进更多且不是新的列表项）
+                    if i < len(lines):
+                        next_line = lines[i]
+                        if next_line.strip() and not re.match(r'^\s*[-*]|\u2020\s+', next_line):
+                            next_indent = len(next_line) - len(next_line.lstrip())
+                            if next_indent > indent:
+                                # 这是续行，添加到当前项
+                                continuation = next_line.rstrip()
+                                continuation = re.sub(r'\*\*(.+?)\*\*([：:、,，.。；;])', r'<strong style="color: #2c3e50; font-weight: 600;">\1\2</strong>', continuation)
+                                continuation = re.sub(r'\*\*([^*]+?)\*\*', r'<strong style="color: #2c3e50; font-weight: 600;">\1</strong>', continuation)
+                                continuation = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2" style="color: #3498db;">\1</a>', continuation)
+                                list_items[-1]['content'] += f' {continuation}'
+                                i += 1
+
+                # 生成嵌套列表 HTML
+                result.append(self._render_nested_list(list_items))
+                continue
+
+            # 处理普通段落
+            processed = re.sub(r'\*\*(.+?)\*\*([：:、,，.。；;])', r'<strong style="color: #2c3e50; font-weight: 600;">\1\2</strong>', stripped)
+            processed = re.sub(r'\*\*([^*]+?)\*\*', r'<strong style="color: #2c3e50; font-weight: 600;">\1</strong>', processed)
+            processed = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2" style="color: #3498db;">\1</a>', processed)
+            result.append(f'<p style="margin: 8px 0; line-height: 1.6;">{processed}</p>')
+            i += 1
+
+        return ''.join(result)
+
+    def _render_nested_list(self, items: List[Dict]) -> str:
+        """
+        渲染嵌套列表结构为 HTML
+
+        Args:
+            items: 列表项字典列表，每个包含 'level' 和 'content'
+
+        Returns:
+            HTML 字符串
+        """
+        if not items:
+            return ''
+
+        def build_tree(items):
+            """将扁平列表项树结构"""
+            if not items:
+                return []
+
+            root = []
+            stack = [(root, -1)]  # (parent_list, level)
+
+            for item in items:
+                level = item['level']
+                content = item['content']
+
+                node = {'content': content, 'children': []}
+
+                # 找到正确的父级
+                while stack and stack[-1][1] >= level:
+                    stack.pop()
+
+                if stack:
+                    stack[-1][0].append(node)
+                else:
+                    root.append(node)
+
+                # 将此节点作为可能的父级
+                stack.append((node['children'], level))
+
+            return root
+
+        def render_items(nodes, is_root=True):
+            """递归渲染列表项"""
+            html = []
+            for node in nodes:
+                content = node['content']
+                children = node['children']
+
+                if children:
+                    children_html = render_items(children, is_root=False)
+                    # 如果内容只有冒号或为空，只渲染子列表
+                    if not content or content in [':', '：']:
+                        html.append(f'<li style="margin: 5px 0; line-height: 1.6;">{children_html}</li>')
+                    else:
+                        html.append(f'<li style="margin: 5px 0; line-height: 1.6;">{content}<ul style="margin: 5px 0; padding-left: 20px;">{children_html}</ul></li>')
+                else:
+                    html.append(f'<li style="margin: 5px 0; line-height: 1.6;">{content}</li>')
+            return ''.join(html)
+
+        tree = build_tree(items)
+        items_html = render_items(tree)
+        return f'<ul style="margin: 5px 0; padding-left: 20px;">{items_html}</ul>'
 
     def _markdown_to_html(self, markdown_text: str) -> str:
         """

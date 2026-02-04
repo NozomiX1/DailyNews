@@ -101,7 +101,7 @@ def publish_date(date_str: str):
         print(f"\n[2/4] ⏭️  GitHub Trending 文件不存在，跳过")
 
     # 3. 发布论文汇总
-    papers_summary_path = output_dir / "papers_summary.md"
+    papers_summary_path = output_dir / "papers" / "papers_summary.md"
     if papers_summary_path.exists():
         print(f"\n[3/4] 发布每日论文汇总...")
         try:
@@ -128,7 +128,7 @@ def publish_date(date_str: str):
     # 4. 发布单篇论文分析
     papers_dir = output_dir / "papers"
     if papers_dir.exists() and papers_dir.is_dir():
-        paper_files = list(papers_dir.glob("*.md"))
+        paper_files = [f for f in papers_dir.glob("*.md") if f.name != "papers_summary.md"]
         if paper_files:
             print(f"\n[4/4] 发布单篇论文分析...")
             print(f"  找到 {len(paper_files)} 篇论文分析")
