@@ -16,7 +16,6 @@ class WechatArticleTask(BaseTask):
     2. Summarize with LLM
     3. Deduplicate with LLM
     4. Format to Markdown
-    5. Publish to WeChat drafts
     """
 
     name = "wechat_articles"
@@ -35,14 +34,12 @@ class WechatArticleTask(BaseTask):
         from ..summarizers import GeminiClient, ArticleSummarizer
         from ..fetchers import WechatFetcher
         from ..processors import LLMDeduplicator, MarkdownFormatter
-        from ..publishers import WechatPublisher
 
         self.client = client or GeminiClient()
         self.fetcher = WechatFetcher(data_dir=self.project_root / "data")
         self.summarizer = ArticleSummarizer(self.client)
         self.deduplicator = LLMDeduplicator(self.client)
         self.formatter = MarkdownFormatter()
-        self.publisher = WechatPublisher()
 
     def should_skip(self, date: str) -> bool:
         """WeChat articles never skip."""
@@ -138,27 +135,3 @@ class WechatArticleTask(BaseTask):
         self.formatter.save(content, output_path)
 
         return content
-
-    def publish(self, content: str, date: str) -> Dict[str, Any]:
-        """
-        Publish daily report to WeChat drafts.
-
-        Args:
-            content: Formatted Markdown content
-            date: Date string in YYYY-MM-DD format
-
-        Returns:
-            Publish result with draft_id
-        """
-        print(f"\n📤 发布公众号日报...")
-        report_path = self.output_dir / "daily_report.md"
-
-        if not report_path.exists():
-            return {"status": "error", "error": "Report file not found"}
-
-        result = self.publisher.publish_daily_report(
-            str(report_path),
-            target_date=date
-        )
-        print(f"  ✅ 草稿已创建: {result['draft_id']}")
-        return result
