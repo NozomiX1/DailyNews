@@ -1,5 +1,5 @@
 # GithubTrendingTask
-# Task for fetching, summarizing, and publishing GitHub Trending repositories
+# Task for fetching, summarizing, and formatting GitHub Trending repositories
 from typing import List, Dict, Any
 from pathlib import Path
 from datetime import datetime
@@ -16,7 +16,6 @@ class GithubTrendingTask(BaseTask):
     2. Download README files
     3. Summarize with LLM
     4. Format to Markdown
-    5. Publish to WeChat drafts
     """
 
     name = "github_trending"
@@ -35,13 +34,11 @@ class GithubTrendingTask(BaseTask):
         from ..summarizers import GeminiClient, GithubSummarizer
         from ..fetchers import GithubTrendingFetcher
         from ..processors import MarkdownFormatter
-        from ..publishers import WechatPublisher
 
         self.client = client or GeminiClient()
         self.fetcher = GithubTrendingFetcher(data_dir=self.project_root / "data")
         self.summarizer = None  # Created with date in summarize()
         self.formatter = MarkdownFormatter()
-        self.publisher = WechatPublisher()
 
     def should_skip(self, date: str) -> bool:
         """
@@ -138,27 +135,3 @@ class GithubTrendingTask(BaseTask):
         self.formatter.save(content, output_path)
 
         return content
-
-    def publish(self, content: str, date: str) -> Dict[str, Any]:
-        """
-        Publish GitHub Trending report to WeChat drafts.
-
-        Args:
-            content: Formatted Markdown content
-            date: Date string in YYYY-MM-DD format
-
-        Returns:
-            Publish result with draft_id
-        """
-        print(f"\n📤 发布 GitHub Trending...")
-        report_path = self.output_dir / "github_trending.md"
-
-        if not report_path.exists():
-            return {"status": "error", "error": "Report file not found"}
-
-        result = self.publisher.publish_github_trending(
-            str(report_path),
-            target_date=date
-        )
-        print(f"  ✅ 草稿已创建: {result['draft_id']}")
-        return result
