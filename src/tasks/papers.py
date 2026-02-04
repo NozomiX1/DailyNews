@@ -20,7 +20,7 @@ class PapersTask(BaseTask):
     This task:
     - Fetches paper metadata from HuggingFace (NO PDF download)
     - Generates Chinese summaries from English abstracts
-    - Formats and publishes a summary report
+    - Formats a summary report
 
     Use PaperAnalysisTask for deep PDF analysis.
     """
@@ -41,13 +41,12 @@ class PapersTask(BaseTask):
         from ..summarizers import GeminiClient, PaperSummarizer
         from ..fetchers import PapersFetcher
         from ..processors import MarkdownFormatter
-        from ..publishers import WechatPublisher
+
 
         self.client = client or GeminiClient()
         self.fetcher = PapersFetcher(data_dir=self.project_root / "data")
         self.summarizer = PaperSummarizer(self.client)
         self.formatter = MarkdownFormatter()
-        self.publisher = WechatPublisher()
 
     def should_skip(self, date: str) -> bool:
         """
@@ -175,26 +174,3 @@ class PapersTask(BaseTask):
 
         return content
 
-    def publish(self, content: str, date: str) -> Dict[str, Any]:
-        """
-        Publish papers summary to WeChat drafts.
-
-        Args:
-            content: Formatted Markdown content
-            date: Date string in YYYY-MM-DD format
-
-        Returns:
-            Publish result with draft_id
-        """
-        print(f"\n📤 发布论文汇总...")
-        report_path = self.output_dir / "papers" / "papers_summary.md"
-
-        if not report_path.exists():
-            return {"status": "error", "error": "Report file not found"}
-
-        result = self.publisher.publish_papers_summary(
-            str(report_path),
-            target_date=date
-        )
-        print(f"  ✅ 草稿已创建: {result['draft_id']}")
-        return result
