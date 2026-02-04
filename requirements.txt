@@ -12,10 +12,3 @@ markdownify>=0.11.6
 
 # Gemini API (LLM 总结与分析)
 google-generativeai>=0.3.0
-
-# Markdown 渲染
-mistune>=3.0.0
-
-# CSS 处理与内联样式转换
-tinycss2
-premailer

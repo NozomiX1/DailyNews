@@ -15,7 +15,6 @@ class BaseTask(ABC):
     2. fetch() - Fetch raw data from source
     3. summarize() - Generate summaries using LLM
     4. format() - Format to Markdown
-    5. publish() - Publish to destination
     """
 
     name: str = "base_task"
@@ -88,27 +87,12 @@ class BaseTask(ABC):
         """
         pass
 
-    @abstractmethod
-    def publish(self, content: str, date: str) -> Dict[str, Any]:
-        """
-        Publish formatted content to destination.
-
-        Args:
-            content: Formatted Markdown content
-            date: Date string in YYYY-MM-DD format
-
-        Returns:
-            Publish result with status, draft_id, etc.
-        """
-        pass
-
-    def run(self, date: str, dry_run: bool = False) -> Dict[str, Any]:
+    def run(self, date: str) -> Dict[str, Any]:
         """
         Execute the complete task workflow (template method).
 
         Args:
             date: Date string in YYYY-MM-DD format
-            dry_run: If True, skip publishing phase
 
         Returns:
             Result dictionary with task status
@@ -119,7 +103,6 @@ class BaseTask(ABC):
             "skipped": False,
             "fetched": 0,
             "summarized": 0,
-            "published": False,
             "errors": []
         }
 
@@ -146,12 +129,6 @@ class BaseTask(ABC):
             # Format phase
             content = self.format(summaries, date)
 
-            # Publish phase
-            if not dry_run:
-                pub_result = self.publish(content, date)
-                result["published"] = pub_result.get("status") == "success"
-                result["draft_id"] = pub_result.get("draft_id")
-
         except Exception as e:
             result["errors"].append(str(e))
 
@@ -170,9 +147,6 @@ class BaseTask(ABC):
             print(f"  ❌ 错误: {result['errors']}")
         else:
             print(f"  ✅ 完成: 爬取 {result['fetched']} → 总结 {result['summarized']}")
-            if result.get("published"):
-                draft_id = result.get("draft_id", "")
-                print(f"     📤 草稿 ID: {draft_id}")
 
     def print_json_preview(self, items: List[Dict[str, Any]], preview_count: int = 3) -> None:
         """

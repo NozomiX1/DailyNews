@@ -17,7 +17,7 @@ DATE_DIR_PAPERS = "papers"         # {date}/papers/
 DATE_DIR_PDF_DOWNLOADS = "pdf_downloads"  # {date}/papers/pdf_downloads/
 DATE_DIR_README_FILES = "readme_files"  # {date}/trending/readme_files/
 
-# ================= 微信爬取配置 =================
+# ================= 微信配置 =================
 
 # 从 cookie1.txt 读取 Cookie
 def load_cookie():
@@ -49,22 +49,6 @@ HEADERS = {
 }
 
 BASE_URL = "https://mp.weixin.qq.com"
-
-# ================= 微信发布配置 =================
-
-# 公众号 AppID 和 AppSecret
-APP_ID = "wx5cd7b21241569ee4"
-APP_SECRET = "28f082df74ed1b78163c8df2e9e8906b"
-
-# 永久封面图 Media ID
-COVER_MEDIA_ID = "eczXpKmOOMk1jO1pgqsdcSf22OGzinl4vNpgd_68ZSmv0qrD_aMbB2LdUEByVor_"
-
-# 代理配置（用于微信公众号 API，绕过 IP 白名单限制）
-# 设置为 None 则不使用代理
-PROXIES = {
-    "http": "http://127.0.0.1:1082",
-    "https": "http://127.0.0.1:1082",
-}
 
 # ================= 缓存配置 =================
 # True=缓存模式(保存数据到data/), False=无缓存模式(仅内存流转)
