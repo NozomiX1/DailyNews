@@ -11,7 +11,178 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 import config
 
+import mistune
+from premailer import transform as premailer_transform
+
 from .base import BasePublisher
+from .css_loader import get_inline_styles_css
+
+
+# ==================== Markdown Renderer ====================
+
+class WeChatRenderer(mistune.HTMLRenderer):
+    """
+    微信公众号渲染器 - 输出带 class 的 HTML
+    样式由 CSS 文件定义，最后通过 premailer 转换为内联样式
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.footnotes = []
+        self.footnote_index = 0
+
+    def reset_footnotes(self):
+        self.footnotes = []
+        self.footnote_index = 0
+
+    def build_footnotes(self):
+        if not self.footnotes:
+            return ''
+
+        html = '<h4>引用链接</h4>\n<p class="footnotes">'
+        for idx, title, url in self.footnotes:
+            html += f'<code>[{idx}]</code>: <i>{url}</i><br/>'
+        html += '</p>'
+        return html
+
+    def heading(self, text, level, **attrs):
+        return f'<h{level}>{text}</h{level}>\n'
+
+    def paragraph(self, text):
+        return f'<p>{text}</p>\n'
+
+    def strong(self, text):
+        return f'<strong>{text}</strong>'
+
+    def emphasis(self, text):
+        return f'<em>{text}</em>'
+
+    def link(self, text, url, title=None):
+        # 微信内部链接直接渲染
+        if url.startswith('https://mp.weixin.qq.com'):
+            return f'<a href="{url}">{text}</a>'
+
+        # 外部链接转换为脚注
+        self.footnote_index += 1
+        self.footnotes.append((self.footnote_index, text, url))
+        return f'{text}<sup>[{self.footnote_index}]</sup>'
+
+    def codespan(self, text):
+        return f'<code>{text}</code>'
+
+    def block_code(self, code, info=None):
+        escaped = mistune.escape(code)
+        return f'<pre class="code__pre"><code>{escaped}</code></pre>\n'
+
+    def list(self, text, ordered, **attrs):
+        tag = 'ol' if ordered else 'ul'
+        return f'<{tag}>{text}</{tag}>\n'
+
+    def list_item(self, text, **attrs):
+        return f'<li>{text}</li>\n'
+
+    def block_quote(self, text):
+        return f'<blockquote>{text}</blockquote>\n'
+
+    def thematic_break(self):
+        return '<hr>\n'
+
+    def image(self, alt, url, title=None):
+        title_attr = f' title="{title}"' if title else ''
+        return f'<img src="{url}" alt="{alt}"{title_attr}>'
+
+    def table(self, header, body):
+        return f'<table><thead>{header}</thead><tbody>{body}</tbody></table>\n'
+
+    def table_head(self, text):
+        return f'<tr>{text}</tr>\n'
+
+    def table_body(self, text):
+        return text
+
+    def table_row(self, text):
+        return f'<tr>{text}</tr>\n'
+
+    def table_cell(self, text, **attrs):
+        tag = 'th' if attrs.get('is_head') else 'td'
+        return f'<{tag}>{text}</{tag}>'
+
+
+def _preprocess_latex(text: str) -> str:
+    """
+    预处理 LaTeX 公式
+    转换 $$...$$ 为 [formula]...[/formula]
+    """
+    # 块级公式
+    text = re.sub(r'\$\$([^$]+)\$\$', r'[formula]\1[/formula]', text)
+    # 行内公式
+    text = re.sub(r'\$([^$]+)\$', r'[inline_formula]\1[/inline_formula]', text)
+    return text
+
+
+def _apply_inline_styles(html: str) -> str:
+    """
+    将 class-based HTML 转换为内联样式 HTML
+
+    Args:
+        html: 带 class 的 HTML
+
+    Returns:
+        带内联样式的 HTML（微信兼容）
+    """
+    css = get_inline_styles_css()
+
+    # 包装为完整 HTML 文档供 premailer 处理
+    full_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>{css}</style>
+    </head>
+    <body>
+        <section>{html}</section>
+    </body>
+    </html>
+    """
+
+    # premailer 转换
+    result = premailer_transform(
+        full_html,
+        remove_classes=True,
+        strip_important=True,
+        keep_style_tags=False,
+        cssutils_logging_level='CRITICAL'
+    )
+
+    # 提取 <section> 内容
+    match = re.search(r'<section[^>]*>(.*?)</section>', result, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return html
+
+
+def _create_wechat_markdown_parser():
+    """创建配置好的 mistune Markdown 解析器"""
+    renderer = WeChatRenderer(escape=False)
+    md = mistune.create_markdown(renderer=renderer)
+
+    def parse_with_styles(text):
+        # 重置脚注
+        renderer.reset_footnotes()
+        # 预处理 LaTeX 公式
+        preprocessed = _preprocess_latex(text)
+        # 渲染为 class-based HTML
+        html = md(preprocessed)
+        # 添加脚注
+        footnotes = renderer.build_footnotes()
+        full_html = html + footnotes
+        # 转换为内联样式
+        return _apply_inline_styles(full_html)
+
+    return parse_with_styles
+
+
+# ==================== Publisher ====================
 
 
 class WechatPublisher(BasePublisher):
@@ -812,214 +983,34 @@ class WechatPublisher(BasePublisher):
 
     def _markdown_to_html(self, markdown_text: str) -> str:
         """
-        将 Markdown 转换为微信公众号 HTML - 完整实现
-        支持标题、列表、链接、粗体等格式
+        将 Markdown 转换为微信公众号 HTML - CSS 驱动版本
+        使用 mistune 渲染，通过 premailer 将 CSS 转为内联样式
         """
+        # 获取解析器（带缓存）
+        if not hasattr(self, '_markdown_parser'):
+            self._markdown_parser = _create_wechat_markdown_parser()
+
+        # 预处理：跳过第一个 h1（因为已在标题处显示）
         lines = markdown_text.split('\n')
-        html_lines = []
-        skip_first_h1 = True  # 跳过第一个 h1（因为已在标题处显示）
+        first_h1_skipped = False
+        processed_lines = []
 
-        # 删除第一段（已作为 intro 显示）
-        first_para_removed = False
-
-        i = 0
-        while i < len(lines):
-            line = lines[i]
-            stripped = line.strip()
-
+        for line in lines:
             # 跳过 --- 分隔线
-            if stripped == '---':
-                i += 1
+            if line.strip() == '---':
                 continue
-
-            # 跳过第一个 h1 标题
-            if skip_first_h1 and re.match(r'^#\s+', line):
-                skip_first_h1 = False
-                i += 1
+            # 跳过第一个 h1
+            if not first_h1_skipped and re.match(r'^#\s+', line):
+                first_h1_skipped = True
                 continue
+            processed_lines.append(line)
 
-            # 跳过第一段（已作为 intro 显示在卡片中）
-            if not first_para_removed and stripped and not re.match(r'^[#\*\-\d\s]', line):
-                first_para_removed = True
-                i += 1
-                continue
-
-            # 处理四级标题
-            match = re.match(r'^####\s+(.+)$', line)
-            if match:
-                content = match.group(1)
-                content = re.sub(r'\*\*(.+?)\*\*([：:、,，.。；;])', r'<strong style="color: #2c3e50; font-weight: 600;">\1\2</strong>', content)
-                content = re.sub(r'\*\*(.+?)\*\*', r'<strong style="color: #2c3e50; font-weight: 600;">\1</strong>', content)
-                html_lines.append(f'<h4 style="font-size: 16px; font-weight: bold; color: #555; text-align: left; margin: 15px 0 10px;">{content}</h4>')
-                i += 1
-                continue
-
-            # 处理三级标题
-            match = re.match(r'^###\s+(.+)$', line)
-            if match:
-                content = match.group(1)
-                content = re.sub(r'\*\*(.+?)\*\*([：:、,，.。；;])', r'<strong style="color: #2c3e50; font-weight: 600;">\1\2</strong>', content)
-                content = re.sub(r'\*\*(.+?)\*\*', r'<strong style="color: #2c3e50; font-weight: 600;">\1</strong>', content)
-                html_lines.append(f'<h3 style="font-size: 18px; font-weight: bold; color: #34495e; text-align: left; margin: 20px 0 12px; padding-left: 10px; border-left: 4px solid #3498db;">{content}</h3>')
-                i += 1
-                continue
-
-            # 处理二级标题
-            match = re.match(r'^##\s+(.+)$', line)
-            if match:
-                content = match.group(1)
-                content = re.sub(r'\*\*(.+?)\*\*([：:、,，.。；;])', r'<strong style="color: #2c3e50; font-weight: 600;">\1\2</strong>', content)
-                content = re.sub(r'\*\*(.+?)\*\*', r'<strong style="color: #2c3e50; font-weight: 600;">\1</strong>', content)
-                html_lines.append(f'<h2 style="font-size: 20px; font-weight: bold; color: #2c3e50; text-align: center; margin: 30px 0 15px; padding: 10px 0; border-top: 1px solid #e0e0e0; border-bottom: 1px solid #e0e0e0;">{content}</h2>')
-                i += 1
-                continue
-
-            # 处理一级标题（跳过第一个之后的其他 h1）
-            match = re.match(r'^#\s+(.+)$', line)
-            if match:
-                content = match.group(1)
-                content = re.sub(r'\*\*(.+?)\*\*([：:、,，.。；;])', r'<strong style="color: #2c3e50; font-weight: 600;">\1\2</strong>', content)
-                content = re.sub(r'\*\*(.+?)\*\*', r'<strong style="color: #2c3e50; font-weight: 600;">\1</strong>', content)
-                html_lines.append(f'<h1 style="font-size: 22px; font-weight: bold; color: #1a1a1a; text-align: center; margin: 25px 0 20px; padding-bottom: 10px;">{content}</h1>')
-                i += 1
-                continue
-
-            # 处理空行
-            if not stripped:
-                if html_lines and not html_lines[-1].startswith('</'):
-                    html_lines.append('<br>')
-                i += 1
-                continue
-
-            # 收集列表（多行）- 支持真正的嵌套列表
-            list_structure = []  # List of (content, children) tuples
-            list_type = None  # 'ul' or 'ol'
-            base_indent = None
-            current_parents = []  # Track parent items with their indent levels
-
-            while i < len(lines):
-                line = lines[i]
-                stripped_i = line.strip()
-
-                # 跳过 --- 分隔线
-                if stripped_i == '---':
-                    i += 1
-                    break
-
-                # 空行结束列表
-                if not stripped_i:
-                    break
-
-                # 检测列表项
-                ul_match = re.match(r'^([\s]*)[\*\-]\s+', line)
-                ol_match = re.match(r'^([\s]*)\d+\.\s+', line)
-
-                match_obj = ul_match if ul_match else ol_match
-
-                if match_obj:
-                    indent = len(match_obj.group(1))
-
-                    # 确定列表类型
-                    if list_type is None:
-                        list_type = 'ul' if ul_match else 'ol'
-                        base_indent = indent
-
-                    # 检测是否是不同类型的列表
-                    current_is_ul = ul_match is not None
-                    if (current_is_ul and list_type != 'ul') or (not current_is_ul and list_type == 'ul'):
-                        if list_structure:
-                            break
-
-                    start, end = match_obj.span()
-                    content = line[end:].rstrip()
-
-                    # 处理内联格式 - 先处理带中文标点的 bold，把标点包含在 strong 标签内
-                    content = re.sub(r'\*\*(.+?)\*\*([：:、,，.。；;])', r'<strong style="color: #2c3e50; font-weight: 600;">\1\2</strong>', content)
-                    content = re.sub(r'\*\*(.+?)\*\*', r'<strong style="color: #2c3e50; font-weight: 600;">\1</strong>', content)
-                    content = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2" style="color: #3498db;">\1</a>', content)
-
-                    # 判断层级
-                    level = 0
-                    if indent > base_indent:
-                        # 计算嵌套层级 (每4个空格或1个tab为一级)
-                        level = (indent - base_indent) // 4 + 1
-
-                    # 添加到结构中
-                    item = {'content': content, 'level': level, 'children': []}
-
-                    # 找到正确的父级
-                    while current_parents and current_parents[-1]['level'] >= level:
-                        current_parents.pop()
-
-                    if current_parents:
-                        current_parents[-1]['children'].append(item)
-                    else:
-                        list_structure.append(item)
-
-                    # 如果这个项可能有自己的子项，加入父级列表
-                    # 但只有当内容不为空或者是标题形式时才作为潜在父级
-                    if content or True:  # 任何项目都可能有子项
-                        current_parents.append(item)
-
-                    i += 1
-                else:
-                    # 非列表行，检查是否是前一个列表项的续行
-                    if list_structure and (line.startswith('    ') or line.startswith('\t')):
-                        continuation = line.rstrip()
-                        continuation = re.sub(r'\*\*(.+?)\*\*([：:、,，.。；;])', r'<strong style="color: #2c3e50; font-weight: 600;">\1\2</strong>', continuation)
-                        continuation = re.sub(r'\*\*(.+?)\*\*', r'<strong style="color: #2c3e50; font-weight: 600;">\1</strong>', continuation)
-                        continuation = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2" style="color: #3498db;">\1</a>', continuation)
-                        # 找到最后的列表项并添加续行
-                        if current_parents:
-                            current_parents[-1]['content'] += f'<br>{continuation}'
-                        elif list_structure:
-                            list_structure[-1]['content'] += f'<br>{continuation}'
-                        i += 1
-                    else:
-                        break
-
-            # 生成 HTML
-            if list_structure:
-                def render_item(item, is_root=True):
-                    content = item['content']
-                    children = item['children']
-                    children_html = ''
-
-                    if children:
-                        # 递归渲染子列表
-                        nested_items = ''.join(render_item(child, False) for child in children)
-                        children_html = f'<ul style="margin: 5px 0; padding-left: 20px;">{nested_items}</ul>'
-
-                    style = 'margin: 8px 0; line-height: 1.8; color: #333;' if is_root else 'margin: 4px 0; line-height: 1.8; color: #333;'
-
-                    # 如果内容只有冒号或为空，与子列表合并
-                    if not content or content == '：' or content == ':':
-                        return f'<li style="{style}">{children_html}</li>'
-                    elif children_html:
-                        return f'<li style="{style}">{content}{children_html}</li>'
-                    else:
-                        return f'<li style="{style}">{content}</li>'
-
-                all_items_html = ''.join(render_item(item) for item in list_structure)
-                style = 'margin: 15px 0; padding-left: 20px;' if list_type == 'ul' else 'margin: 15px 0; padding-left: 25px;'
-                html_lines.append(f'<{list_type} style="{style}">{all_items_html}</{list_type}>')
-                continue
-                continue
-
-            # 处理普通段落
-            if stripped:
-                line = re.sub(r'\*\*(.+?)\*\*([：:、,，.。；;])', r'<strong style="color: #2c3e50; font-weight: 600;">\1\2</strong>', line)
-                line = re.sub(r'\*\*(.+?)\*\*', r'<strong style="color: #2c3e50; font-weight: 600;">\1</strong>', line)
-                line = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2" style="color: #3498db;">\1</a>', line)
-                html_lines.append(f'<p style="font-size: 15px; color: #333; line-height: 1.9; margin-bottom: 10px; text-align: justify;">{line}</p>')
-
-            i += 1
-
-        return '\n'.join(html_lines)
+        processed_text = '\n'.join(processed_lines)
+        return self._markdown_parser(processed_text)
 
     def _generate_paper_html(self, paper_data: Dict) -> str:
         """
-        生成单篇论文的精美 HTML
+        生成单篇论文的精美 HTML（CSS 驱动）
 
         Args:
             paper_data: 论文数据字典
@@ -1027,57 +1018,51 @@ class WechatPublisher(BasePublisher):
         Returns:
             HTML 字符串
         """
-        container = '<section style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; max-width: 677px; margin: 0 auto; padding: 20px 0;">'
-
-        # 标题头部 - 使用英文原标题
         english_title = paper_data.get('english_title', paper_data.get('title', ''))
-        title_html = f'''
-<div style="text-align: center; margin-bottom: 25px;">
-    <h1 style="font-size: 24px; font-weight: bold; color: #1a1a1a; margin: 0 0 15px; line-height: 1.4;">{english_title}</h1>
-</div>
-'''
 
-        # 元信息卡片
-        meta_html = '<div style="background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%); padding: 15px; border-radius: 8px; margin-bottom: 25px; font-size: 14px; color: #555;">'
+        html_parts = []
+        html_parts.append(f'<h1>{english_title}</h1>')
 
-        # 论文链接 - 纯文本格式
+        # 元信息
+        meta_parts = []
         if paper_data.get('arxiv_url'):
-            meta_html += f'<div style="margin-bottom: 8px;">📄 论文：<a href="{paper_data["arxiv_url"]}" style="color: #3498db; text-decoration: none;">{paper_data["arxiv_url"]}</a></div>'
+            meta_parts.append(f'📄 论文：<a href="{paper_data["arxiv_url"]}">{paper_data["arxiv_url"]}</a>')
         elif paper_data.get('arxiv_id'):
-            arxiv_url = f"https://arxiv.org/abs/{paper_data['arxiv_id']}"
-            meta_html += f'<div style="margin-bottom: 8px;">📄 论文：<a href="{arxiv_url}" style="color: #3498db; text-decoration: none;">{arxiv_url}</a></div>'
-
+            url = f"https://arxiv.org/abs/{paper_data['arxiv_id']}"
+            meta_parts.append(f'📄 论文：<a href="{url}">{url}</a>')
         if paper_data.get('org'):
-            meta_html += f'<div style="margin-bottom: 8px;">🔬 <strong>机构：</strong>{paper_data["org"]}</div>'
+            meta_parts.append(f'🔬 <strong>机构：</strong>{paper_data["org"]}')
         if paper_data.get('tags'):
-            meta_html += f'<div style="margin-bottom: 8px;">🏷️ <strong>标签：</strong>{paper_data["tags"]}</div>'
+            meta_parts.append(f'🏷️ <strong>标签：</strong>{paper_data["tags"]}')
 
-        # 得分和互动数据
-        stats_row = ''
+        stats = []
         if paper_data.get('score'):
-            stats_row += f'<span style="display: inline-block; margin-right: 15px;">📊 {paper_data["score"]}</span>'
+            stats.append(f'📊 {paper_data["score"]}')
         if paper_data.get('upvotes'):
-            stats_row += f'<span style="display: inline-block; margin-right: 15px;">👍 {paper_data["upvotes"]}</span>'
+            stats.append(f'👍 {paper_data["upvotes"]}')
         if paper_data.get('stars'):
-            stats_row += f'<span style="display: inline-block;">🌟 {paper_data["stars"]}</span>'
-        if stats_row:
-            meta_html += f'<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #d0d7de;">{stats_row}</div>'
+            stats.append(f'🌟 {paper_data["stars"]}')
 
-        meta_html += '</div>'
+        if meta_parts or stats:
+            html_parts.append('<blockquote>')
+            html_parts.append('<p>' + '<br>'.join(meta_parts) + '</p>')
+            if stats:
+                html_parts.append('<p>' + ' | '.join(stats) + '</p>')
+            html_parts.append('</blockquote>')
 
-        # 摘要段落
-        intro_html = ''
         if paper_data.get('intro'):
-            intro_html = f'<p style="font-size: 15px; color: #444; line-height: 1.8; margin-bottom: 20px; text-align: justify; padding: 12px; background: #f9f9f9; border-radius: 6px;">{paper_data["intro"]}</p>'
+            html_parts.append(f'<p><em>{paper_data["intro"]}</em></p>')
 
-        # 正文（使用完整 Markdown→HTML 转换）
+        # 正文
         body_html = self._markdown_to_html(paper_data['body'])
+        html_parts.append(body_html)
 
-        return container + title_html + meta_html + intro_html + body_html + '</section>'
+        full_html = '<section>' + '\n'.join(html_parts) + '</section>'
+        return _apply_inline_styles(full_html)
 
     def _generate_simple_paper_html(self, paper: Dict) -> str:
         """
-        生成简化版论文 HTML（用于 publish_paper 方法）
+        生成简化版论文 HTML（CSS 驱动）
 
         Args:
             paper: 简化论文数据
@@ -1085,40 +1070,27 @@ class WechatPublisher(BasePublisher):
         Returns:
             HTML 字符串
         """
-        container = '<section style="font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; max-width: 677px; margin: 0 auto; padding: 20px 0;">'
+        html_parts = []
+        html_parts.append(f'<h1>{paper.get("title", "未知")}</h1>')
 
-        title_html = f'<h1 style="font-size: 24px; font-weight: bold; color: #1a1a1a; margin: 0 0 15px; text-align: center;">{paper.get("title", "未知")}</h1>'
-
-        meta_html = '<div style="background: #f5f7fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; color: #555;">'
-
+        meta_parts = []
         if paper.get('arxiv_id'):
-            arxiv_url = f"https://arxiv.org/abs/{paper['arxiv_id']}"
-            meta_html += f'<div style="margin-bottom: 8px;">📄 <strong>论文：</strong><a href="{arxiv_url}" style="color: #3498db;">{paper["arxiv_id"]}</a></div>'
-
+            url = f"https://arxiv.org/abs/{paper['arxiv_id']}"
+            meta_parts.append(f'📄 <strong>论文：</strong><a href="{url}">{paper["arxiv_id"]}</a>')
         if paper.get('org'):
-            meta_html += f'<div style="margin-bottom: 8px;">🔬 <strong>机构：</strong>{paper["org"]}</div>'
-
+            meta_parts.append(f'🔬 <strong>机构：</strong>{paper["org"]}')
         if paper.get('tags'):
-            meta_html += f'<div style="margin-bottom: 8px;">🏷️ <strong>标签：</strong>{paper["tags"]}</div>'
+            meta_parts.append(f'🏷️ <strong>标签：</strong>{paper["tags"]}')
 
-        stats_row = ''
-        if paper.get('score'):
-            stats_row += f'<span style="display: inline-block; margin-right: 15px;">📊 {paper["score"]}</span>'
-        if paper.get('upvotes'):
-            stats_row += f'<span style="display: inline-block; margin-right: 15px;">👍 {paper["upvotes"]}</span>'
-        if paper.get('stars'):
-            stats_row += f'<span style="display: inline-block;">⭐ {paper["stars"]}</span>'
+        if meta_parts:
+            html_parts.append('<blockquote><p>' + '<br>'.join(meta_parts) + '</p></blockquote>')
 
-        if stats_row:
-            meta_html += f'<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #d0d7de;">{stats_row}</div>'
-
-        meta_html += '</div>'
-
-        # Convert markdown analysis to HTML (simplified)
         analysis = paper.get('analysis', '')
-        body_html = f'<div style="font-size: 15px; color: #333; line-height: 1.8;">{analysis.replace("\n", "<br>")}</div>'
+        if analysis:
+            html_parts.append(f'<p>{analysis}</p>')
 
-        return container + title_html + meta_html + body_html + '</section>'
+        full_html = '<section>' + '\n'.join(html_parts) + '</section>'
+        return _apply_inline_styles(full_html)
 
     def publish_single_paper(self, analysis_path: str) -> Dict[str, Any]:
         """
