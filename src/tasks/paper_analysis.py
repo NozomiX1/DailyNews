@@ -21,7 +21,6 @@ class PaperAnalysisTask(BaseTask):
     - Downloads full ArXiv PDFs
     - Analyzes each paper with Gemini using PDF upload
     - Generates detailed analysis notes
-    - Can publish each paper as a separate draft
     """
 
     name = "paper_analysis"
@@ -51,12 +50,10 @@ class PaperAnalysisTask(BaseTask):
         from ..summarizers import GeminiClient
         from ..fetchers import PapersFetcher
         from ..utils.paper_ranker import PaperRanker
-        from ..publishers import WechatPublisher
 
         self.client = client or GeminiClient(model="gemini-3-pro-high")
         self.fetcher = PapersFetcher(data_dir=self.project_root / "data")
         self.ranker = PaperRanker(enable_topic_bonus=enable_topic_bonus)
-        self.publisher = WechatPublisher()
         self.min_papers = min_papers
         self.max_papers = max_papers
 
@@ -310,27 +307,3 @@ class PaperAnalysisTask(BaseTask):
         """
         # No-op: papers are already formatted in summarize()
         return ""
-
-    def publish(self, content: str, date: str) -> Dict[str, Any]:
-        """
-        Publish all paper analyses as separate drafts.
-
-        Args:
-            content: Summary content (not used, individual papers are published)
-            date: Date string in YYYY-MM-DD format
-
-        Returns:
-            Publish results for all papers
-        """
-        print(f"\n📤 发布论文分析...")
-
-        results = self.publisher.publish_all_papers(date)
-
-        success_count = sum(1 for r in results if r.get('status') == 'success')
-        print(f"\n✅ 完成: {success_count}/{len(results)} 篇论文发布成功")
-
-        return {
-            "status": "success" if success_count > 0 else "error",
-            "count": len(results),
-            "success_count": success_count
-        }
