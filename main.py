@@ -9,24 +9,17 @@ DailyNews Main Entry Point
 - 周末自动跳过论文爬取（arXiv 不发布）
 - GitHub Trending 只能爬取当天数据
 
-发布策略：
-- 不加 --publish（默认）：只生成 output/ 目录中的 Markdown 文件，不推送草稿
-- 加 --publish：生成文件 + 推送到微信公众号草稿箱
-
 Usage:
-    # 只生成输出文件，不推送（默认行为）
-    python main.py --wechat
+    # 运行默认任务
+    python main.py
 
-    # 生成文件 + 推送到草稿箱
-    python main.py --wechat --publish
+    # 运行指定任务
+    python main.py --wechat --github
 
-    # 运行论文深度分析 + 推送
-    python main.py --analyze --paper-num 5 --publish
+    # 运行论文深度分析
+    python main.py --analyze --paper-num 5
 
-    # 多任务 + 推送
-    python main.py --wechat --github --paper --publish
-
-    # 运行指定日期的任务（不推送）
+    # 运行指定日期的任务
     python main.py --date 2026-02-02 --wechat
 """
 import sys
@@ -55,14 +48,13 @@ def is_weekend(date_str: str) -> bool:
     return weekday == 5 or weekday == 6  # 5=周六, 6=周日
 
 
-def run_pipeline(date: str, tasks_to_run: list, dry_run: bool = False):
+def run_pipeline(date: str, tasks_to_run: list):
     """
-    运行完整流程：爬取 → 总结 → 清理 → 格式化 → 发布
+    运行完整流程：爬取 → 总结 → 清理 → 格式化
 
     Args:
         date: 目标日期 (YYYY-MM-DD)
         tasks_to_run: 要运行的任务列表，包含 'wechat', 'github', 'paper'
-        dry_run: 只运行到格式化，不实际发布
     """
     today = datetime.now().strftime('%Y-%m-%d')
 
@@ -106,7 +98,7 @@ def run_pipeline(date: str, tasks_to_run: list, dry_run: bool = False):
         print(f"📋 {task.name} - {date}")
         print(f"{'='*60}")
 
-        result = task.run(date, dry_run=dry_run)
+        result = task.run(date)
         results[task.name] = result
 
         # 打印结果
@@ -125,14 +117,10 @@ def run_pipeline(date: str, tasks_to_run: list, dry_run: bool = False):
             for error in result["errors"]:
                 print(f"  - {error}")
 
-    if dry_run:
-        print("\n🔍 DRY RUN - 跳过发布阶段")
-
 
 def run_paper_analysis_pipeline(
     target_date: str = None,
-    paper_num: int = 5,
-    dry_run: bool = False
+    paper_num: int = 5
 ):
     """
     论文深度分析流程 - 获取、排序、下载、分析
@@ -140,7 +128,6 @@ def run_paper_analysis_pipeline(
     Args:
         target_date: 目标日期 (YYYY-MM-DD)，默认今天
         paper_num: 分析论文数量
-        dry_run: 只显示不实际执行
     """
     # 默认今天
     if target_date is None:
@@ -164,14 +151,10 @@ def run_paper_analysis_pipeline(
     )
 
     # 执行任务
-    result = task.run(target_date, dry_run=dry_run)
+    result = task.run(target_date)
 
     # 打印结果
     task.print_result(result)
-
-    if dry_run:
-        print("\n[DRY RUN] 跳过发布阶段")
-        return result
 
     # 额外的汇总信息
     print("\n" + "=" * 80)
@@ -190,19 +173,16 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # 只生成输出文件，不推送（默认行为）
-  python main.py --wechat
+  # 运行默认任务
+  python main.py
 
-  # 生成文件 + 推送到草稿箱
-  python main.py --wechat --publish
+  # 运行指定任务
+  python main.py --wechat --github
 
-  # 运行论文深度分析 + 推送
-  python main.py --analyze --paper-num 5 --publish
+  # 运行论文深度分析
+  python main.py --analyze --paper-num 5
 
-  # 多任务 + 推送
-  python main.py --wechat --github --paper --publish
-
-  # 运行指定日期的任务（不推送）
+  # 运行指定日期的任务
   python main.py --date 2026-02-02 --wechat
         """
     )
@@ -239,11 +219,6 @@ Examples:
         default=5,
         help='论文分析任务时的论文数量（仅在 --analyze 时有效，默认5）'
     )
-    parser.add_argument(
-        '--publish',
-        action='store_true',
-        help='推送到微信公众号草稿箱（默认不推送）'
-    )
 
     args = parser.parse_args()
 
@@ -252,8 +227,7 @@ Examples:
         if args.analyze:
             run_paper_analysis_pipeline(
                 target_date=args.date,
-                paper_num=args.paper_num,
-                dry_run=not args.publish
+                paper_num=args.paper_num
             )
             return
 
@@ -280,8 +254,8 @@ Examples:
             if not is_weekend(target_date):
                 tasks_to_run.append('paper')
 
-        # 主流程（爬取 → 总结 → 格式化 → 发布）
-        run_pipeline(date=target_date, tasks_to_run=tasks_to_run, dry_run=not args.publish)
+        # 主流程（爬取 → 总结 → 格式化）
+        run_pipeline(date=target_date, tasks_to_run=tasks_to_run)
 
     except KeyboardInterrupt:
         print("\n\n⚠️ 用户中断")
