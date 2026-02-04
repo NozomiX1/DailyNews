@@ -44,4 +44,78 @@ def get_inline_styles_css() -> str:
     Returns:
         处理后的 CSS 字符串
     """
-    return load_theme_css()
+    base_css = load_theme_css()
+
+    # 添加文章列表专用的样式
+    list_css = """
+
+/* ==================== 文章列表专用样式 ==================== */
+.article-list {
+  font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+}
+
+.article-spacer {
+  margin-top: 20px;
+}
+
+.article-title {
+  margin-top: 30px;
+  margin-bottom: 5px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #000;
+}
+
+.article-meta {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 10px;
+  background: #f9f9f9;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.article-summary {
+  font-size: 16px;
+  color: #333;
+  line-height: 1.6;
+  margin-bottom: 25px;
+}
+
+.article-link {
+  display: inline-block;
+  margin-top: 4px;
+  color: #576b95;
+  word-break: break-all;
+}
+
+.tech-stack {
+  display: inline-block;
+  margin-top: 4px;
+  color: #666;
+  font-size: 13px;
+}
+
+.highlight-box {
+  font-size: 14px;
+  color: #666;
+  background: #f0f7ff;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 25px;
+  border-left: 3px solid #3498db;
+}
+
+.highlight-box-warning {
+  background: #fff8e1;
+  border-left-color: #f39c12;
+}
+
+.article-divider {
+  border: 0;
+  border-top: 1px dashed #ddd;
+  margin: 20px 0;
+}
+"""
+
+    return base_css + list_css

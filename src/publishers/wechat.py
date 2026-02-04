@@ -252,7 +252,7 @@ class WechatPublisher(BasePublisher):
             if meta_second_parts:
                 meta_second_line = '<br>' + ''.join(meta_second_parts)
 
-            return f'{meta_first_line}{meta_second_line}<br><span style="display: inline-block; margin-top: 4px; color: #576b95; word-break: break-all;">🔗 链接：{item["url"]}</span>'
+            return f'{meta_first_line}{meta_second_line}<br><span class="article-link">🔗 链接：{item["url"]}</span>'
 
         elif item_type == 'github':
             parts = []
@@ -263,11 +263,11 @@ class WechatPublisher(BasePublisher):
             if item.get('today_stars'):
                 parts.append(f'🔥 今日：+{item["today_stars"]}')
 
-            meta_line = f'{"　".join(parts)}<br><span style="display: inline-block; margin-top: 4px; color: #576b95; word-break: break-all;">🔗 链接：{item["url"]}</span>'
+            meta_line = f'{"　".join(parts)}<br><span class="article-link">🔗 链接：{item["url"]}</span>'
 
             # Add tech stack below the link (without bold)
             if item.get('tech_stack'):
-                meta_line += f'<br><span style="display: inline-block; margin-top: 4px; color: #666; font-size: 13px;">技术栈: {item["tech_stack"]}</span>'
+                meta_line += f'<br><span class="tech-stack">技术栈: {item["tech_stack"]}</span>'
 
             return meta_line
 
@@ -281,13 +281,13 @@ class WechatPublisher(BasePublisher):
                 parts.append(f'⭐ {item["stars"]}')
 
             meta_line = '　'.join(parts) if parts else ''
-            return f'{meta_line}<br><span style="display: inline-block; margin-top: 4px; color: #576b95; word-break: break-all;">🔗 链接：{item["url"]}</span>'
+            return f'{meta_line}<br><span class="article-link">🔗 链接：{item["url"]}</span>'
 
         return ''
 
     def generate_html(self, items: List[Dict], item_type: str = 'article') -> str:
         """
-        从新闻列表生成 HTML
+        从新闻列表生成 HTML（CSS 驱动）
 
         Args:
             items: News items list
@@ -296,38 +296,39 @@ class WechatPublisher(BasePublisher):
         Returns:
             HTML string
         """
-        html_parts = ['<section style="font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;">']
-        html_parts.append('<section style="margin-top: 20px;"></section>')
+        html_parts = ['<section class="article-list">']
+        html_parts.append('<section class="article-spacer"></section>')
 
         for idx, item in enumerate(items, 1):
             title = item.get('title', item.get('original_title', ''))
 
-            title_html = f'<h3 style="margin-top: 30px; margin-bottom: 5px; font-size: 18px; font-weight: bold; color: #000;">{idx}. {title}</h3>'
+            title_html = f'<h3 class="article-title">{idx}. {title}</h3>'
 
-            meta_html = f'<div style="font-size: 13px; color: #888; margin-bottom: 10px; background: #f9f9f9; padding: 8px; border-radius: 4px;">{self._generate_meta_row(item, item_type)}</div>'
+            meta_html = f'<div class="article-meta">{self._generate_meta_row(item, item_type)}</div>'
 
             summary = item.get('summary', '')
-            # Use markdown conversion instead of simple newline replacement
             summary_html = self._simple_markdown_to_html(summary)
-            summary_html = f'<div style="font-size: 16px; color: #333; line-height: 1.6; margin-bottom: 25px;">{summary_html}</div>'
+            summary_html = f'<div class="article-summary">{summary_html}</div>'
 
             # Add highlights section for papers and use_cases/highlights for github
             highlights_html = ''
             if item_type == 'paper' and item.get('highlights'):
-                highlights_html = f'<div style="font-size: 14px; color: #666; background: #f0f7ff; padding: 10px; border-radius: 4px; margin-bottom: 25px; border-left: 3px solid #3498db;"><strong>✨ 亮点:</strong><br>{item["highlights"]}</div>'
+                highlights_html = f'<div class="highlight-box"><strong>✨ 亮点:</strong><br>{item["highlights"]}</div>'
             elif item_type == 'github':
                 # Use cases section
                 if item.get('use_cases'):
-                    highlights_html += f'<div style="font-size: 14px; color: #666; background: #f0f7ff; padding: 10px; border-radius: 4px; margin-bottom: 10px; border-left: 3px solid #3498db;"><strong>🎯 使用场景:</strong><br>{item["use_cases"]}</div>'
+                    highlights_html += f'<div class="highlight-box"><strong>🎯 使用场景:</strong><br>{item["use_cases"]}</div>'
                 # Highlights section
                 if item.get('highlights'):
-                    highlights_html += f'<div style="font-size: 14px; color: #666; background: #fff8e1; padding: 10px; border-radius: 4px; margin-bottom: 25px; border-left: 3px solid #f39c12;"><strong>✨ 亮点:</strong><br>{item["highlights"]}</div>'
+                    highlights_html += f'<div class="highlight-box highlight-box-warning"><strong>✨ 亮点:</strong><br>{item["highlights"]}</div>'
 
-            divider = '<hr style="border: 0; border-top: 1px dashed #ddd; margin: 20px 0;" />' if idx < len(items) else ""
+            divider = '<hr class="article-divider" />' if idx < len(items) else ""
             html_parts.append(title_html + meta_html + summary_html + highlights_html + divider)
 
         html_parts.append("</section>")
-        return "".join(html_parts)
+
+        full_html = "".join(html_parts)
+        return _apply_inline_styles(full_html)
 
     # ================= Parsing =================
 
