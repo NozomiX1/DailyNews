@@ -139,7 +139,7 @@ class WechatFetcher(BaseFetcher):
 
                     if sent_time == 0:
                         appmsgex = publish_info.get("appmsgex", [])
-                        if appmsgex:
+                        if appmsgex and appmsgex[0]:
                             sent_time = appmsgex[0].get("create_time", 0)
 
                     if sent_time == 0:

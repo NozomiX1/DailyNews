@@ -14,6 +14,11 @@ import config
 
 from .retry import retry_on_request_error
 
+
+class WeChatContentError(requests.exceptions.RequestException):
+    """微信文章内容获取失败异常（触发重试）"""
+    pass
+
 # 沿用配置中的 Headers
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -21,7 +26,7 @@ HEADERS = {
 }
 
 
-@retry_on_request_error(max_retries=3)
+@retry_on_request_error(max_retries=3, delay=2.0, backoff=2.0)
 def parse_wechat_to_md(url: str) -> Optional[str]:
     """
     下载微信文章并转换为 Markdown
@@ -36,13 +41,20 @@ def parse_wechat_to_md(url: str) -> Optional[str]:
     try:
         resp = requests.get(url, headers=HEADERS, timeout=30)
         if resp.status_code != 200:
-            print(f"    ❌ 下载失败: {resp.status_code}")
-            return None
+            raise WeChatContentError(f"HTTP {resp.status_code}")
 
         # 检查是否获取到有效内容
         if 'js_content' not in resp.text:
-            print(f"    ❌ Cookie 可能已过期或无效")
-            return None
+            # 检查是否是速率限制（需要重试）
+            rate_limit_indicators = ['访问过于频繁', '请在微信客户端', 'anti-spider', 'antispider']
+            is_rate_limit = any(indicator in resp.text for indicator in rate_limit_indicators)
+
+            if is_rate_limit:
+                raise WeChatContentError("可能遇到速率限制，稍后重试")
+            else:
+                # 内容确实不存在（文章删除/违规等），不重试
+                print(f"      ⚠️ 文章内容不可用（可能已删除或需特殊权限）")
+                return None
 
         soup = BeautifulSoup(resp.text, 'html.parser')
 
@@ -54,7 +66,7 @@ def parse_wechat_to_md(url: str) -> Optional[str]:
             content_div = soup.find('div', {'class': 'rich_media_content'})
 
         if not content_div:
-            return None
+            raise WeChatContentError("未找到文章内容区域")
 
         # 修复图片：data-src -> src
         for img in content_div.find_all('img'):
@@ -65,15 +77,29 @@ def parse_wechat_to_md(url: str) -> Optional[str]:
 
         # 移除重复的 logo 图片
         from collections import Counter
-        img_urls = [img.get('src') or img.get('data-src', '')
-                    for img in content_div.find_all('img')
-                    if img.get('src') or img.get('data-src')]
+        all_imgs = content_div.find_all('img')
+
+        # 先收集所有图片 URL（在修改 DOM 之前）
+        img_urls = []
+        for img in all_imgs:
+            if img.attrs:  # 检查 attrs 不是 None
+                src = img.get('src') or img.get('data-src', '')
+                if src:
+                    img_urls.append(src)
+
         url_counts = Counter(img_urls)
 
-        for img in content_div.find_all('img'):
-            img_url = img.get('src') or img.get('data-src', '')
-            if img_url and url_counts.get(img_url, 0) > 2:
-                img.decompose()
+        # 先收集要删除的图片元素（避免迭代时修改 DOM）
+        imgs_to_remove = []
+        for img in all_imgs:
+            if img.attrs:  # 检查 attrs 不是 None
+                img_url = img.get('src') or img.get('data-src', '')
+                if img_url and url_counts.get(img_url, 0) > 2:
+                    imgs_to_remove.append(img)
+
+        # 统一删除
+        for img in imgs_to_remove:
+            img.decompose()
 
         # 移除干扰标签
         for tag in content_div(['script', 'style', 'iframe']):
