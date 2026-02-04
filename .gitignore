@@ -27,5 +27,8 @@ _archive_*/
 .vscode/
 .claude/
 
+# Git worktrees
+.worktrees/
+
 # Misc
 *.pdf
