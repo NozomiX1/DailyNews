@@ -54,10 +54,3 @@ BASE_URL = "https://mp.weixin.qq.com"
 # True=缓存模式(保存数据到data/), False=无缓存模式(仅内存流转)
 ENABLE_CACHE = False
 FAKEID_CACHE_FILE = PROJECT_ROOT / "fakeid_cache.json"
-
-# ================= 广告关键词 =================
-AD_KEYWORDS = [
-    "广告", "推广", "赞助", "合作", "招商",
-    "课程", "限时优惠", "立即购买", "扫码报名",
-    "广告位", "商务合作", "诚招代理"
-]
