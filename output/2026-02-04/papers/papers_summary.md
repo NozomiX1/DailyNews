@@ -1,6 +1,6 @@
 # 每日论文汇总 - 2026-02-04
 
-**论文数量**: 10
+**论文数量**: 9
 
 ---
 
@@ -12,29 +12,29 @@
 **标签**: Super Lab, Must Read
 **Upvotes**: 5 | **Stars**: 0
 
-**摘要**: 针对当前多模态大模型（MLLM）评估中视觉知识检索与逻辑推理能力混淆的问题，Moonshot AI 提出 WorldVQA 基准。该基准通过解耦推理与检索，专注于衡量模型对视觉实体的“原子级记忆”能力。WorldVQA 采用分层分类体系，涵盖从头部常见物体到长尾稀有实体的定位与命名。实验表明，该基准能有效作为视觉事实性的严苛测试，为评估前沿模型的百科知识广度与幻觉率建立新标准。
+**摘要**: 针对当前多模态模型评估中知识检索与推理能力混淆的痛点，Moonshot AI 推出 WorldVQA 基准。该基准通过解耦推理过程，严格衡量模型对视觉实体的“原子级”记忆与命名能力，涵盖从常见到长尾稀有实体的分层体系。研究旨在为视觉事实性提供严谨测试，确立评估前沿模型百科知识广度与幻觉率的新标准。
 
 **亮点**:
-  - 提出首个专注于原子级视觉知识检索的解耦评估基准
-  - 构建了涵盖常见到长尾实体的分层视觉实体分类体系
-  - 为评估多模态模型的视觉事实性与幻觉率提供严苛标准
+  - 提出首个专注于解耦推理、纯粹衡量视觉原子知识的评估基准
+  - 构建了涵盖从头部常见类到长尾稀有实体的分层视觉实体分类体系
+  - 为评估 MLLM 的视觉幻觉率和百科全书式知识广度建立了新标准
 
 ---
 
-###  2. 面向视觉生成的统一个性化奖励模型 (Unified Personalized Reward Model for Vision Generation)
+###  2. 视觉生成的统一个性化奖励模型 (Unified Personalized Reward Model for Vision Generation)
 
 **论文链接**: [https://arxiv.org/abs/2602.02380](https://arxiv.org/abs/2602.02380)
 **组织**: Fudan University
-**得分**: 53.76
+**得分**: 53.78
 **标签**: 
-**Upvotes**: 15 | **Stars**: 687
+**Upvotes**: 15 | **Stars**: 689
 
-**摘要**: 针对现有奖励模型因采用固定评估准则而无法适配主观、语境相关人类偏好的痛点，复旦大学提出 UnifiedReward-Flex。该模型将奖励建模与语境自适应推理相结合，通过动态构建分层评估标准来解读语义意图并锚定视觉证据。经两阶段训练（VLM 蒸馏 SFT 与 DPO）并集成至 GRPO 框架，在图像与视频合成任务中显著提升了偏好对齐性能与生成质量。
+**摘要**: 针对现有奖励模型因采用单一评价标准而导致与人类主观偏好失配的问题，复旦大学提出 UnifiedReward-Flex。该模型将奖励建模与灵活的情境自适应推理相结合，通过动态构建分层评估指标捕捉细粒度视觉线索。采用闭源 VLM 知识蒸馏与 DPO 两阶段训练优化。实验表明，将其集成至 GRPO 框架可显著提升图像与视频生成的对齐质量与表现。
 
 **亮点**:
-  - 提出支持语境自适应推理的统一个性化奖励模型 UnifiedReward-Flex
-  - 采用闭源 VLM 知识蒸馏与 DPO 结合的两阶段优化策略
-  - 在图像与视频生成任务中实现了更精准的人类偏好对齐性能
+  - 提出 UnifiedReward-Flex 架构实现情境自适应的动态奖励评估
+  - 采用从高级闭源 VLM 蒸馏推理链及 DPO 的两阶段训练方案
+  - 成功集成至 GRPO 框架并显著提升了图像和视频生成的 SOTA 性能
 
 ---
 
@@ -42,37 +42,37 @@
 
 **论文链接**: [https://arxiv.org/abs/2602.02103](https://arxiv.org/abs/2602.02103)
 **组织**: Tencent
-**得分**: 40.15
+**得分**: 40.91
 **标签**: Frontier Lab
-**Upvotes**: 48 | **Stars**: 0
+**Upvotes**: 56 | **Stars**: 0
 
-**摘要**: 本文针对大语言模型（LLM）在思维链（CoT）推理中内部状态与表述轨迹的关系展开研究。通过提出的 Tele-Lens 探测方法，研究者发现 LLM 在推理过程中表现出“近视”特征，即主要进行增量式转换，而非精确的全局规划。基于此发现，研究验证了利用少量 CoT 位置即可实现有效的不确定性估计，并证明自动识别 CoT 旁路可在不损失性能的前提下优化推理效率。
+**摘要**: 本研究探讨了大语言模型（LLM）在思维链（CoT）推理过程中的内部规划机制。针对 LLM 是否在生成 CoT 前已具备全局规划的争议，研究者提出 Tele-Lens 探测方法分析隐藏状态。实验表明，LLM 的规划视野具有“近视”性，倾向于增量式状态转换而非全局规划。基于此发现，研究验证了通过少数 CoT 节点即可表征整体路径的不确定性，并实现了在不降低性能的情况下自动识别可跳过 CoT 的推理场景。
 
 **亮点**:
-  - 提出 Tele-Lens 探测方法，揭示了 LLM 内部的潜在规划强度
-  - 发现 LLM 在 CoT 推理中仅具备局部“近视”视野，缺乏全局规划能力
-  - 通过 CoT 关键位置实现了高效的不确定性估计和推理旁路识别
+  - 提出 Tele-Lens 探测方法揭示 LLM 的潜在规划强度
+  - 发现 LLM 的推理过程具有“近视”特征且缺乏全局规划
+  - 验证了通过局部 CoT 位置进行高效不确定性估计的可行性
 
 ---
 
-###  4. MARS：基于反思搜索的模块化自动 AI 研究智能体 (MARS: Modular Agent with Reflective Search for Automated AI Research)
+###  4. MARS：基于反思搜索的自动化 AI 研究模块化代理 (MARS: Modular Agent with Reflective Search for Automated AI Research)
 
 **论文链接**: [https://arxiv.org/abs/2602.02660](https://arxiv.org/abs/2602.02660)
 **组织**: Google
-**得分**: 38.32
+**得分**: 38.47
 **标签**: Frontier Lab
-**Upvotes**: 33 | **Stars**: 0
+**Upvotes**: 34 | **Stars**: 0
 
-**摘要**: 针对自动 AI 研究中计算成本高昂和性能归因模糊的挑战，谷歌提出 MARS 框架。该框架结合受成本约束的蒙特卡洛树搜索（MCTS）进行预算感知规划，采用“设计-分解-实现”流水线进行模块化构建，并通过比较反思记忆提取高信号见解。MARS 在 MLE-Bench 上达到开源框架 SOTA 水平，并展现出显著的跨分支知识迁移与泛化能力。
+**摘要**: 针对自动化 AI 研究中计算成本高且性能归因难的痛点，Google 提出 MARS 框架。该框架通过基于 MCTS 的预算感知规划平衡执行开销与性能，采用模块化构建流程管理复杂代码，并利用对比反思记忆提取高信号洞察。MARS 在 MLE-Bench 上取得开源框架 SOTA 性能，并展现出显著的跨分支知识迁移能力。
 
 **亮点**:
-  - 提出受成本约束的蒙特卡洛树搜索 (MCTS) 规划机制
-  - 在 MLE-Bench 基准测试中取得开源框架 SOTA 性能
-  - 实现 63% 的跨分支知识迁移，展现“顿悟”式泛化能力
+  - 提出基于成本约束 MCTS 的预算感知规划算法
+  - 在 MLE-Bench 基准测试中达到开源框架 SOTA 水平
+  - 通过对比反思记忆实现 63% 的跨分支经验有效迁移
 
 ---
 
-###  5. 从人类偏好中学习特定查询的评估标准以优化深度调研报告生成 (Learning Query-Specific Rubrics from Human Preferences for DeepResearch Report Generation)
+###  5. 基于人类偏好的 DeepResearch 报告生成：学习特定查询的评价标准 (Learning Query-Specific Rubrics from Human Preferences for DeepResearch Report Generation)
 
 **论文链接**: [https://arxiv.org/abs/2602.03619](https://arxiv.org/abs/2602.03619)
 **组织**: Tencent
@@ -80,16 +80,16 @@
 **标签**: Frontier Lab
 **Upvotes**: 20 | **Stars**: 0
 
-**摘要**: 针对深度调研报告生成中缺乏可验证奖励信号及评估标准颗粒度不足的问题，腾讯团队提出了一套训练与人类偏好对齐的特定查询评估标准（Rubric）生成器的流程。该方法结合人类偏好监督与强化学习，并引入多智能体马尔可夫状态（MaMs）工作流以增强长程推理。实验证明，该方法生成的标准更具区分度，在 DeepResearch Bench 上超越了所有开源基准并比肩领先闭源模型。
+**摘要**: 本文针对 DeepResearch 报告生成中评估信号缺失、现有评价标准（Rubrics）难以兼顾细粒度与可扩展性的痛点，提出了一种训练与人类偏好对齐的特定查询 Rubric 生成器。该方法通过结合人类偏好监督与 LLM 评估的混合奖励强化学习进行优化，并引入多智能体马尔可夫状态（MaMs）工作流以增强长程推理。实验表明，该系统在 DeepResearch Bench 上超越了所有开源基线，性能比肩领先的闭源模型。
 
 **亮点**:
-  - 提出首个自动生成人类偏好对齐的特定查询评估标准（Rubric）框架
-  - 引入 MaMs 多智能体马尔可夫状态工作流以优化长程推理报告生成
-  - 性能在 DeepResearch Bench 上达到 SOTA 级别，显著超越开源基准
+  - 提出首个与人类偏好对齐的特定查询评价标准生成器
+  - 引入 MaMs 多智能体马尔可夫状态工作流优化长程推理
+  - 性能超越所有开源基线并在 DeepResearch 领域达到 SOTA
 
 ---
 
-###  6. 减噪增声：通过指令净化实现推理强化学习 (Less Noise, More Voice: Reinforcement Learning for Reasoning via Instruction Purification)
+###  6. 减噪增效：基于指令净化的推理强化学习 (Less Noise, More Voice: Reinforcement Learning for Reasoning via Instruction Purification)
 
 **论文链接**: [https://arxiv.org/abs/2601.21244](https://arxiv.org/abs/2601.21244)
 **组织**: BAIDU
@@ -97,79 +97,62 @@
 **标签**: Frontier Lab
 **Upvotes**: 12 | **Stars**: 0
 
-**摘要**: 针对强化学习（RLVR）在复杂任务中因提示词干扰导致探索效率低、训练不稳的痛点，百度提出 LENS 框架。该方法先通过识别并剔除干扰 token 进行指令净化，再将净化后的成功采样经验迁移至原始带噪提示词的策略优化中。实验表明，LENS 在性能和收敛速度上显著优于 GRPO，平均提升 3.88% 且加速 1.6 倍以上。
+**摘要**: 针对强化学习（RLVR）在复杂任务中探索效率低和训练不稳定的痛点，百度提出 LENS 框架。该方法通过识别并剔除指令中的干扰令牌进行净化，利用净化后的成功采样指导原始噪声环境下的策略优化。实验证明，LENS 在推理性能上显著优于 GRPO，平均提升 3.88% 且训练速度提升逾 1.6 倍。
 
 **亮点**:
-  - 提出 LENS 采样框架，有效解决提示词干扰导致的探索失败
-  - 引入指令净化（Instruction Purification）技术提升采样效率
-  - 相比 GRPO 实现 1.6 倍以上的训练加速和显著的性能提升
+  - 提出 LENS 框架通过指令净化解决 RL 探索效率问题
+  - 实现比 GRPO 算法快 1.6 倍以上的收敛速度
+  - 开辟了通过剪枝干扰令牌提升强化学习探索效率的新路径
 
 ---
 
-###  7. daVinci-Agency：通过 Pull Request 序列高效解锁长程智能体能力 (daVinci-Agency: Unlocking Long-Horizon Agency Data-Efficiently)
+###  7. daVinci-Agency：利用软件演进数据解锁高效长程智能体能力 (daVinci-Agency: Unlocking Long-Horizon Agency Data-Efficiently)
 
 **论文链接**: [https://arxiv.org/abs/2602.02619](https://arxiv.org/abs/2602.02619)
 **组织**: SII - GAIR
-**得分**: 33.4
+**得分**: 33.52
 **标签**: 
-**Upvotes**: 38 | **Stars**: 10
+**Upvotes**: 39 | **Stars**: 10
 
-**摘要**: 针对大语言模型在长程智能体任务中面临的高质量训练数据稀缺问题，本文提出 daVinci-Agency。该方法利用软件开发中的 Pull Request (PR) 序列作为监督信号，通过任务分解、长期一致性维护及可验证的修复轨迹构建复杂数据。实验证明，仅用 239 个样本微调 GLM-4.6 即可在 Toolathlon 榜单取得 47% 的相对性能提升，显著提升了长程数据的获取效率。
+**摘要**: 针对大语言模型在处理长程智能体任务时面临的高质量数据稀缺及复杂依赖建模难点，本文提出 daVinci-Agency。该框架创新性地将 GitHub 的 Pull Request (PR) 序列转化为监督信号，通过连续提交实现任务分解，并利用真实的 Bug 修复轨迹进行可验证的性能优化。实验显示，仅需 239 个 PR 样本进行微调，即可使 GLM-4.6 在 Toolathlon 基准上实现 47% 的性能提升，显著增强了模型在复杂软件工程场景下的长程目标导向能力。
 
 **亮点**:
-  - 创新性地利用 PR 序列作为真实长程轨迹的自动监督来源
-  - 生成包含超 8.5 万 token 和 116 次工具调用的高质量超长轨迹
-  - 展现出极高的数据效率，微调少量样本即可大幅提升模型性能
+  - 提出基于 Pull Request 序列挖掘真实长程监督信号的新范式
+  - 实现极高的数据效率，仅需 239 个样本即可显著提升模型性能
+  - 生成包含平均 8.5 万 token 的超长复杂任务轨迹，有效捕捉因果依赖
 
 ---
 
-###  8. 保留多样性的分布匹配蒸馏：实现快速视觉合成 (Diversity-Preserved Distribution Matching Distillation for Fast Visual Synthesis)
+###  8. 面向快速视觉合成的保持多样性分布匹配蒸馏 (Diversity-Preserved Distribution Matching Distillation for Fast Visual Synthesis)
 
 **论文链接**: [https://arxiv.org/abs/2602.03139](https://arxiv.org/abs/2602.03139)
 **组织**: City University of Hong Kong
-**得分**: 32.08
+**得分**: 32.24
 **标签**: 
-**Upvotes**: 30 | **Stars**: 9
+**Upvotes**: 31 | **Stars**: 9
 
-**摘要**: 针对分布匹配蒸馏（DMD）因反向 KL 散度导致模式崩塌的痛点，本文提出 DP-DMD 角色分离蒸馏框架。该方法将蒸馏步骤解耦：首步通过 v-prediction 目标保留样本多样性，后续步骤利用标准 DMD 损失进行质量精炼。DP-DMD 无需判别器或感知骨干，在极低计算开销下实现了与 SOTA 相当的文生图效果。
+**摘要**: 针对分布匹配蒸馏（DMD）在少步生成任务中因其 reverse-KL 形式导致模式崩溃（Mode Collapse）的问题，本文提出 DP-DMD 框架。该方法通过角色分离蒸馏策略，在首步利用目标预测（如 v-prediction）来保持样本多样性，后续步骤则专注于标准 DMD 损失下的质量精炼。在无需判别器或辅助网络的情况下，DP-DMD 实现了与 SOTA 相当的视觉质量并有效保留了图像多样性。
 
 **亮点**:
-  - 提出角色分离的蒸馏框架 DP-DMD
-  - 无需感知损失或判别器即可解决模式崩塌
-  - 在保持生成多样性的同时达到 SOTA 视觉质量
+  - 提出角色分离蒸馏框架 (Role-separated distillation)
+  - 有效缓解 DMD 蒸馏中的模式崩溃问题
+  - 无需感知损失或判别器的极简高效架构
 
 ---
 
-###  9. 针对泛癌症筛查的扫视与聚焦强化学习框架 (Glance and Focus Reinforcement for Pan-cancer Screening)
-
-**论文链接**: [https://arxiv.org/abs/2601.19103](https://arxiv.org/abs/2601.19103)
-**组织**: The Hong Kong University of Science and Technology
-**得分**: 28.05
-**标签**: 
-**Upvotes**: 4 | **Stars**: 24
-
-**摘要**: 针对大规模CT泛癌症筛查中微小病灶定位难和前景背景极度失衡的挑战，本文提出GF-Screen强化学习框架。该框架效仿医生的“扫视与聚焦”策略，利用Glance模型初步定位并由Focus模型精确分割，通过强化学习机制实现非微分操作的优化。引入组相对学习范式提升了检测效率并降低假阳性。在FLARE25挑战赛中位居榜首，性能显著超越上届冠军。
-
-**亮点**:
-  - 提出仿生放射科医生诊断策略的GF-Screen强化学习架构
-  - 引入组相对学习范式（Group Relative Learning）显著降低假阳性
-  - 在MICCAI FLARE25泛癌症挑战赛中性能大幅超越上届冠军
-
----
-
-###  10. Search-R2：通过 Actor-Refiner 协作增强搜索集成推理 (Search-R2: Enhancing Search-Integrated Reasoning via Actor-Refiner Collaboration)
+###  9. Search-R2：通过 Actor-Refiner 协作增强搜索集成推理 (Search-R2: Enhancing Search-Integrated Reasoning via Actor-Refiner Collaboration)
 
 **论文链接**: [https://arxiv.org/abs/2602.03647](https://arxiv.org/abs/2602.03647)
 **组织**: Tencent Hunyuan
-**得分**: 27.62
+**得分**: 28.74
 **标签**: Frontier Lab
-**Upvotes**: 3 | **Stars**: 0
+**Upvotes**: 4 | **Stars**: 0
 
-**摘要**: 针对搜索集成推理在强化学习中面临的多尺度信用分配及奖励稀疏问题，腾讯混元提出 Search-R2 框架。该框架采用 Actor 生成初始轨迹、Meta-Refiner 执行“剪枝再生成”诊断修复的协作机制。通过结合结果正确性与信息密度的混合奖励设计，Search-R2 在多跳问答任务中显著超越了传统 RAG 和 RL 基线，以极低开销实现了卓越的推理准确性。
+**摘要**: 针对搜索集成推理中强化学习面临的信度分配难题，腾讯混元团队提出 Search-R2 框架。该框架采用 Actor-Refiner 协作机制，由 Actor 生成初始推理路径，Meta-Refiner 通过“剪枝与重生成”机制对错误步骤进行针对性修复。结合结果正确性与量化检索信息密度的密集过程奖励，该方法在多跳问答任务中显著优于现有 RAG 和 RL 基线，实现了更高效的推理性能。
 
 **亮点**:
-  - 提出 Actor-Refiner 协同优化的搜索推理框架
-  - 引入“剪枝再生成”机制实现细粒度错误修复
-  - 设计量化信息密度的混合过程奖励函数
+  - 提出 Actor-Refiner 协作框架实现针对性推理干预
+  - 引入量化检索信息密度的密集过程奖励解决信度分配难题
+  - 在多跳问答实验中一致优于强 RAG 和 RL 基准
 
 ---
