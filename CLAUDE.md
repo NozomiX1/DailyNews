@@ -4,78 +4,92 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-DailyNews is a Python web scraper for fetching articles from WeChat Official Accounts (公众号). It retrieves published articles via WeChat's internal APIs and converts HTML content to Markdown format.
+DailyNews is a Markdown generation system that aggregates content from multiple sources:
+- **WeChat Official Accounts** - Fetches and converts articles to Markdown
+- **GitHub Trending** - Generates daily trending repositories summaries
+- **ArXiv Papers** - Summarizes recent research papers from arXiv
+
+All generated Markdown files are output to the `output/` directory.
 
 ## Running the Code
 
 ```bash
-# Fetch yesterday's articles from the target Official Account
-python wechat_fetch.py
+# Generate daily reports to output/
+python main.py --wechat --github --paper
 
-# Convert a WeChat article URL to Markdown
-python conclude.py
+# Generate only WeChat articles
+python main.py --wechat
+
+# Generate only GitHub trending
+python main.py --github
+
+# Generate only arXiv papers summary
+python main.py --paper
 ```
 
 ## Architecture
 
-The project consists of two main Python scripts:
+The project uses a modular generator pattern with source-specific implementations:
 
-### `wechat_fetch.py` - Article List Fetcher
+### Generators
 
-Orchestrates the scraping workflow:
+All generators implement a common interface and output Markdown to `output/`:
 
-1. **`get_fakeid(name)`** - Searches for an Official Account by name and returns its `fakeid` (WeChat's internal identifier)
-2. **`get_published_articles(fakeid, page)`** - Fetches published articles via `/cgi-bin/appmsgpublish` API. Handles pagination and extracts article metadata (title, link, timestamp, digest, is_headline)
-3. **`fetch_yesterday_articles(fakeid)`** - Iterates through pages to collect all articles published yesterday (natural day logic, 00:00-23:59)
+1. **`WeChatGenerator`** - Fetches articles from WeChat Official Accounts
+   - Uses `cookie1.txt` for authentication (browser export format)
+   - Converts WeChat HTML to clean Markdown
+   - Handles pagination and date filtering
 
-Key implementation details:
-- Uses a three-strategy approach to extract timestamps from WeChat's complex nested JSON response (sent_info.time, nested publish_info.create_time, or appmsgex[0].create_time)
-- Stops pagination when reaching articles older than yesterday to avoid unnecessary API calls
-- Results are sorted by timestamp ascending (morning articles first)
+2. **`GitHubTrendingGenerator`** - Generates trending repository summaries
+   - Scrapes GitHub trending page
+   - Extracts repository metadata and descriptions
 
-### `conclude.py` - HTML to Markdown Converter
+3. **`ArXivPaperGenerator`** - Summarizes research papers
+   - Fetches recent papers from arXiv
+   - Generates paper summaries in Markdown
 
-**`parse_wechat_to_md(url)`** - Downloads a WeChat article URL and converts it to clean Markdown:
+### Configuration
 
-1. Extracts metadata: title (`#activity-name`), account name (`#js_name`), publish time (from script `ct` variable)
-2. Extracts article body from `#js_content` div
-3. Fixes lazy-loaded images by converting `data-src` to `src`
-4. Uses `markdownify` for HTML→Markdown conversion
-5. Outputs structured Markdown with YAML-style frontmatter
+Configuration is loaded from `.env` file:
 
-## Configuration
+- `WECHAT_COOKIE_PATH` - Path to cookie file (default: `cookie1.txt`)
+- `WECHAT_TARGET_NAME` - Target Official Account name (default: "新智元")
+- `OUTPUT_DIR` - Output directory for generated Markdown (default: `output/`)
 
-Both scripts have hardcoded configuration at the top:
-
-- `TOKEN` - WeChat management platform token
-- `COOKIE` - Full WeChat authentication cookie (must include `appmsglist_action_*`, `bizuin`, etc.)
-- `TARGET_NAME` - The Official Account name to scrape (default: "新智元")
-- `HEADERS` - Request headers including User-Agent, Cookie, and Referer
-
-**Important**: WeChat's authentication cookies expire. When the scraper fails with authentication errors, the cookie needs to be updated by copying from browser dev tools.
+**Cookie Format**: The `cookie1.txt` file should be exported from your browser in Netscape cookie format. WeChat's authentication cookies expire periodically and need to be refreshed.
 
 ## Dependencies
 
-The project uses these Python packages (no requirements.txt present):
-- `requests` - HTTP client
-- `BeautifulSoup` (bs4) - HTML parsing
-- `markdownify` - HTML to Markdown conversion
-
-Install via:
+Install Python dependencies via:
 ```bash
-pip install requests beautifulsoup4 markdownify
+pip install -r requirements.txt
 ```
 
-## API Endpoints Used
+The project uses these Python packages:
+- `requests` - HTTP client
+- `beautifulsoup4` - HTML parsing
+- `markdownify` - HTML to Markdown conversion
+- `python-dotenv` - Environment configuration
+- `httpx` - Async HTTP client
 
-| Endpoint | Purpose |
-|----------|---------|
-| `/cgi-bin/searchbiz` | Search Official Accounts by name, get fakeid |
-| `/cgi-bin/appmsgpublish` | Fetch published articles list with pagination |
+## Output Format
 
-## WeChat API Quirks
+All generators output Markdown files with YAML frontmatter:
 
-- The `publish_page` field in API responses is a JSON string that needs `json.loads()` to parse
-- Article timestamps are nested differently depending on publish type (群发 vs 发布)
-- Pagination uses `begin` parameter (page * 5) with fixed count of 5
-- Referer header is required or newer APIs will return errors
+```markdown
+---
+title: Article Title
+source: wechat/github/arxiv
+date: 2025-01-15
+url: https://...
+---
+
+# Article Title
+
+Content here...
+```
+
+Files are organized in `output/` by source and date:
+- `output/wechat/YYYY-MM-DD-title.md`
+- `output/github/trending-YYYY-MM-DD.md`
+- `output/arxiv/papers-YYYY-MM-DD.md`
