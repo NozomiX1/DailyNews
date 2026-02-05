@@ -32,7 +32,7 @@ def load_cookie():
         raise FileNotFoundError("❌ 找不到 cookie1.txt 文件")
 
 # 微信管理平台 Token
-TOKEN = "164005766"
+TOKEN = "109965380"
 
 # Cookie
 COOKIE = load_cookie()
