@@ -2,12 +2,12 @@
 
 ## 📊 今日情报
 
-### 1. [Anthropic] Claude 3.6 Sonnet：1M上下文突破与全场景Agent性能进化
+### 1. [Anthropic] Claude 4.6 Sonnet：1M上下文突破与全场景Agent性能进化
 **来源**: 机器之心 | **时间**: 2026-02-18 20:48
 **价值**: 🌟🌟🌟🌟🌟 **标签**: [大模型] [Anthropic] [Computer Use] [智能体] [代码生成]
 **链接**: https://mp.weixin.qq.com/s/Xw1tfQGfsj-IYOIbfebbzg
 
-> 🎯 **一句话摘要**：Claude 3.6 Sonnet 在保持高性价比的同时，通过 1M 上下文窗口、强化的 Computer Use 能力及大幅优化的指令遵循，刷新了中量级模型的性能上限，在多项指标上超越了 Opus 系列。
+> 🎯 **一句话摘要**：Claude 4.6 Sonnet 在保持高性价比的同时，通过 1M 上下文窗口、强化的 Computer Use 能力及大幅优化的指令遵循，刷新了中量级模型的性能上限，在多项指标上超越了 Opus 系列。
 
 #### 🔹 核心技术/实现逻辑
 - **Computer Use (CU) 视觉反馈闭环**：在 OSWorld 基准下，模型不再依赖专用 API，而是通过视觉解析模拟人类的点击和输入。新版本优化了对复杂 UI（如多标签页浏览器、大型电子表格）的理解深度，提升了在模拟计算机环境中的操作成功率。
