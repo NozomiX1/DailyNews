@@ -1,6 +1,5 @@
 # DailyNews - GitHub Trending Fetcher
 # Migrated from src/github_trending.py
-import os
 import json
 import requests
 from datetime import datetime

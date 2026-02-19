@@ -5,7 +5,6 @@ import json
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-import sys
 
 from .base import BaseFetcher
 from ..utils import parse_wechat_to_md, retry_on_request_error

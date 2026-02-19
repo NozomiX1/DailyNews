@@ -10,8 +10,5 @@ lxml>=5.0.0
 # HTML 转 Markdown
 markdownify>=0.11.6
 
-# 环境变量管理
-python-dotenv>=1.0.0
-
 # OpenAI SDK (zhipu_client 使用 OpenAI 兼容 API)
 openai>=1.0.0

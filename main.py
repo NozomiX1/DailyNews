@@ -16,7 +16,7 @@ Usage:
     # 运行指定任务
     python main.py --wechat --github
 
-    # 运行论文深度分析
+    # 运行论文深度分析（需要多模态模型支持）
     python main.py --analyze --paper-num 5
 
     # 运行指定日期的任务
@@ -70,11 +70,11 @@ def run_pipeline(date: str, tasks_to_run: list):
     skip_trending = (date != today)
 
     print("=" * 60)
-    print(f"🚀 DailyNews Pipeline - {date} ({weekday_name})")
+    print(f"DailyNews Pipeline - {date} ({weekday_name})")
     print("=" * 60)
-    print(f"   公众号: {'✅' if 'wechat' in tasks_to_run else '❌'}")
-    print(f"   Trending: {'✅' if 'github' in tasks_to_run else '❌'}")
-    print(f"   论文轻量汇总: {'✅' if 'paper' in tasks_to_run else '❌'}")
+    print(f"   公众号: {'Y' if 'wechat' in tasks_to_run else 'N'}")
+    print(f"   Trending: {'Y' if 'github' in tasks_to_run else 'N'}")
+    print(f"   论文轻量汇总: {'Y' if 'paper' in tasks_to_run else 'N'}")
     print(f"   输出目录: output/{date}/")
     print("=" * 60)
 
@@ -101,7 +101,7 @@ def run_pipeline(date: str, tasks_to_run: list):
     results = {}
     for task in tasks:
         print(f"\n{'='*60}")
-        print(f"📋 {task.name} - {date}")
+        print(f"[Task] {task.name} - {date}")
         print(f"{'='*60}")
 
         result = task.run(date)
@@ -112,14 +112,14 @@ def run_pipeline(date: str, tasks_to_run: list):
 
     # 汇总报告
     print("\n" + "=" * 60)
-    print("✅ Pipeline Completed!")
+    print("Pipeline Completed!")
     print("=" * 60)
-    print(f"📁 输出目录: {output_dir}")
+    print(f"Output directory: {output_dir}")
 
     # 打印错误
     for task_name, result in results.items():
         if result.get("errors"):
-            print(f"\n⚠️ {task_name} 错误:")
+            print(f"\n[Warning] {task_name} errors:")
             for error in result["errors"]:
                 print(f"  - {error}")
 
@@ -130,6 +130,8 @@ def run_paper_analysis_pipeline(
 ):
     """
     论文深度分析流程 - 获取、排序、下载、分析
+
+    注意：需要多模态模型支持（analyze_pdf_bytes 方法）
 
     Args:
         target_date: 目标日期 (YYYY-MM-DD)，默认今天
@@ -191,7 +193,7 @@ Examples:
   # 运行指定任务
   python main.py --wechat --github
 
-  # 运行论文深度分析
+  # 运行论文深度分析（需要多模态模型支持）
   python main.py --analyze --paper-num 5
 
   # 运行指定日期的任务
@@ -223,7 +225,7 @@ Examples:
     parser.add_argument(
         '--analyze',
         action='store_true',
-        help='运行 Paper Analysis 深度分析任务'
+        help='运行 Paper Analysis 深度分析任务（需要多模态模型支持）'
     )
     parser.add_argument(
         '--paper-num',
@@ -270,10 +272,10 @@ Examples:
         run_pipeline(date=target_date, tasks_to_run=tasks_to_run)
 
     except KeyboardInterrupt:
-        print("\n\n⚠️ 用户中断")
+        print("\n\n[Warning] 用户中断")
         sys.exit(1)
     except Exception as e:
-        print(f"\n\n❌ 错误: {e}")
+        print(f"\n\n[Error] {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

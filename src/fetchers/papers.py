@@ -1,6 +1,5 @@
 # DailyNews - Papers Fetcher
 # Migrated from src/paper_fetch.py
-import os
 import requests
 from datetime import date, timedelta
 from pathlib import Path
