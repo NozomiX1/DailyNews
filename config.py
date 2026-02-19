@@ -56,7 +56,8 @@ ENABLE_CACHE = False
 FAKEID_CACHE_FILE = PROJECT_ROOT / "fakeid_cache.json"
 
 # ================= GLM 模型配置 =================
-GLM_API_KEY = os.environ.get("ZHIPU_API_KEY", "a1cd8c131bb2496097d662a2feeeb6c4.a1q8aDi7PDQiJSKC")
+# API Key 从环境变量读取，请设置 ZHIPU_API_KEY 环境变量
+GLM_API_KEY = os.environ.get("ZHIPU_API_KEY")
 GLM_BASE_URL = "https://open.bigmodel.cn/api/coding/paas/v4"
 GLM_MODEL = "glm-4.7"  # 默认模型
 GLM_MAX_TOKENS = 65536
