@@ -9,6 +9,7 @@ from .zhipu_client import ZhipuClient
 from .article_summarizer import ArticleSummarizer
 from .github_summarizer import GithubSummarizer
 from .paper_summarizer import PaperSummarizer
+from .hackernews_summarizer import HackerNewsSummarizer
 
 __all__ = [
     "BaseSummarizer",
@@ -16,4 +17,5 @@ __all__ = [
     "ArticleSummarizer",
     "GithubSummarizer",
     "PaperSummarizer",
+    "HackerNewsSummarizer",
 ]
