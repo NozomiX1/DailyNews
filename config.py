@@ -2,20 +2,11 @@
 import os
 from pathlib import Path
 
-# 加载 .env 文件（本地开发用）
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
-
 # ================= 项目路径 =================
 PROJECT_ROOT = Path(__file__).parent
 DATA_DIR = PROJECT_ROOT / "data"
 SUMMARIES_DIR = DATA_DIR / "summaries"
 OUTPUT_DIR = PROJECT_ROOT / "output"
-LOGS_DIR = PROJECT_ROOT / "logs"
-CACHE_DIR = PROJECT_ROOT
 
 # 按日期组织的子目录名称
 DATE_DIR_ARTICLES = "articles"     # {date}/articles/
@@ -26,24 +17,12 @@ DATE_DIR_README_FILES = "readme_files"  # {date}/trending/readme_files/
 
 # ================= 微信配置 =================
 
-# 从环境变量或 cookie1.txt 读取 Cookie（环境变量优先）
+# 从环境变量读取 Cookie
 def load_cookie():
-    # 优先从环境变量读取
-    env_cookie = os.environ.get("WECHAT_COOKIE", "")
-    if env_cookie:
-        return env_cookie
-
-    # fallback 到本地文件
-    cookie_path = PROJECT_ROOT / "cookie1.txt"
-    try:
-        with open(cookie_path, "r", encoding="utf-8") as f:
-            cookie = f.read().strip()
-            if not cookie:
-                raise ValueError("cookie1.txt is empty")
-            return cookie
-    except FileNotFoundError:
-        if not env_cookie:
-            raise FileNotFoundError("❌ 找不到 cookie1.txt 文件，请设置 WECHAT_COOKIE 环境变量或创建该文件")
+    cookie = os.environ.get("WECHAT_COOKIE", "")
+    if not cookie:
+        raise ValueError("WECHAT_COOKIE 环境变量未设置")
+    return cookie
 
 # 微信管理平台 Token（从环境变量读取）
 TOKEN = os.environ.get("WECHAT_TOKEN", "")
@@ -76,4 +55,3 @@ GLM_BASE_URL = "https://open.bigmodel.cn/api/coding/paas/v4"
 GLM_MODEL = "glm-4.7"  # 默认模型
 GLM_MAX_TOKENS = 65536
 GLM_ENABLE_THINKING = True
-GLM_TEMPERATURE = 1.0
