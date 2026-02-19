@@ -1,18 +1,18 @@
 """
 DailyNews Summarizers Module
 
-Content summarization using LLM (Gemini).
+Content summarization using LLM (Zhipu GLM).
 """
 
 from .base import BaseSummarizer
-from .gemini_client import GeminiClient
+from .zhipu_client import ZhipuClient
 from .article_summarizer import ArticleSummarizer
 from .github_summarizer import GithubSummarizer
 from .paper_summarizer import PaperSummarizer
 
 __all__ = [
     "BaseSummarizer",
-    "GeminiClient",
+    "ZhipuClient",
     "ArticleSummarizer",
     "GithubSummarizer",
     "PaperSummarizer",

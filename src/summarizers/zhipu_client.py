@@ -1,36 +1,40 @@
 # Zhipu AI Client Wrapper
-# OpenAI-compatible API client for GLM models
+# Using OpenAI SDK for GLM models
 import os
 import time
-import requests
 from typing import Optional
+from openai import OpenAI
 
 
 class ZhipuClient:
-    """Zhipu AI API client with OpenAI-compatible interface."""
+    """Zhipu AI API client using OpenAI SDK."""
 
-    API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+    # API 配置
+    BASE_URL = "https://open.bigmodel.cn/api/coding/paas/v4"  # Coding 接口
 
     def __init__(
         self,
-        model: str = "glm-4.7-flash",
+        model: str = "glm-5",
         api_key: str = None,
-        enable_thinking: bool = True,
+        base_url: str = None,
         max_tokens: int = 65536,
+        enable_thinking: bool = True,
     ):
         """
         Initialize Zhipu client.
 
         Args:
-            model: Model name (default: glm-4.7-flash)
+            model: Model name (default: glm-5)
             api_key: API key for authentication (reads from ZHIPU_API_KEY env var if not provided)
-            enable_thinking: Enable thinking/reasoning mode (default: True)
+            base_url: API base URL (default: standard endpoint)
             max_tokens: Maximum tokens in response (default: 65536)
+            enable_thinking: Enable thinking mode (default: False)
         """
         self.model = model
         self.api_key = api_key or os.environ.get("ZHIPU_API_KEY")
-        self.enable_thinking = enable_thinking
+        self.base_url = base_url or self.BASE_URL
         self.max_tokens = max_tokens
+        self.enable_thinking = enable_thinking
 
         if not self.api_key:
             raise ValueError(
@@ -38,13 +42,23 @@ class ZhipuClient:
                 "Set ZHIPU_API_KEY environment variable or pass api_key parameter."
             )
 
+        # Initialize OpenAI client
+        self.client = OpenAI(
+            base_url=self.base_url,
+            api_key=self.api_key,
+            default_headers={
+                "Accept-Language": "en-US,en",
+                "User-Agent": "Claude-Code/1.0",
+            },
+        )
+
     def generate_content(
         self,
         prompt: str,
         max_retries: int = 3,
         initial_delay: float = 2.0,
         backoff: float = 2.0,
-        temperature: float = 0.7,
+        temperature: float = 1.0,
     ) -> "ZhipuResponse":
         """
         Generate content from text prompt with retry logic.
@@ -54,7 +68,7 @@ class ZhipuClient:
             max_retries: Maximum retry attempts (default: 3)
             initial_delay: Initial delay in seconds before first retry (default: 2.0)
             backoff: Exponential backoff multiplier (default: 2.0)
-            temperature: Sampling temperature (default: 0.7)
+            temperature: Sampling temperature (default: 1.0)
 
         Returns:
             ZhipuResponse object with .text attribute
@@ -62,44 +76,33 @@ class ZhipuClient:
         current_delay = initial_delay
         last_exception = None
 
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
-
-        payload = {
-            "model": self.model,
-            "messages": [
-                {"role": "user", "content": prompt}
-            ],
-            "stream": False,
-            "temperature": temperature,
-            "max_tokens": self.max_tokens,
-        }
-
-        # Add thinking mode if enabled
+        # Build extra parameters
+        extra_body = {}
         if self.enable_thinking:
-            payload["thinking"] = {"type": "enabled"}
+            extra_body["thinking"] = {"type": "enabled"}
 
         for attempt in range(max_retries + 1):
             try:
-                response = requests.post(
-                    self.API_URL,
-                    json=payload,
-                    headers=headers,
-                    timeout=60,
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[{"role": "user", "content": prompt}],
+                    stream=False,
+                    temperature=temperature,
+                    max_tokens=self.max_tokens,
+                    extra_body=extra_body if extra_body else None,
                 )
 
-                if response.status_code == 200:
-                    data = response.json()
-                    return ZhipuResponse(data)
-
-                # Handle retryable status codes
-                if response.status_code in [429, 500, 502, 503, 504]:
-                    raise requests.HTTPError(f"HTTP {response.status_code}: {response.text}")
-
-                # Non-retryable error
-                raise requests.HTTPError(f"HTTP {response.status_code}: {response.text}")
+                # Convert to dict format for ZhipuResponse
+                data = {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": response.choices[0].message.content
+                            }
+                        }
+                    ]
+                }
+                return ZhipuResponse(data)
 
             except Exception as e:
                 last_exception = e
@@ -134,6 +137,7 @@ class ZhipuClient:
             "ConnectionError",
             "Timeout",
             "network",
+            "RateLimitError",
         ]
 
         error_str_lower = error_str.lower()

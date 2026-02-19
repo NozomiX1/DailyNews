@@ -5,6 +5,7 @@ from pathlib import Path
 from datetime import datetime
 
 from .base import BaseTask
+import config
 
 
 class WechatArticleTask(BaseTask):
@@ -25,17 +26,23 @@ class WechatArticleTask(BaseTask):
         Initialize WeChat article task.
 
         Args:
-            client: GeminiClient instance
+            client: ZhipuClient instance
             output_dir: Output directory for generated files
             project_root: Project root directory
         """
         super().__init__(output_dir, project_root)
 
-        from ..summarizers import GeminiClient, ArticleSummarizer
+        from ..summarizers import ZhipuClient, ArticleSummarizer
         from ..fetchers import WechatFetcher
         from ..processors import LLMDeduplicator, MarkdownFormatter
 
-        self.client = client or GeminiClient()
+        self.client = client or ZhipuClient(
+            model=config.GLM_MODEL,
+            api_key=config.GLM_API_KEY,
+            base_url=config.GLM_BASE_URL,
+            max_tokens=config.GLM_MAX_TOKENS,
+            enable_thinking=config.GLM_ENABLE_THINKING,
+        )
         self.fetcher = WechatFetcher(data_dir=self.project_root / "data")
         self.summarizer = ArticleSummarizer(self.client)
         self.deduplicator = LLMDeduplicator(self.client)

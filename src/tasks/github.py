@@ -5,6 +5,7 @@ from pathlib import Path
 from datetime import datetime
 
 from .base import BaseTask
+import config
 
 
 class GithubTrendingTask(BaseTask):
@@ -25,17 +26,23 @@ class GithubTrendingTask(BaseTask):
         Initialize GitHub Trending task.
 
         Args:
-            client: GeminiClient instance
+            client: ZhipuClient instance
             output_dir: Output directory for generated files
             project_root: Project root directory
         """
         super().__init__(output_dir, project_root)
 
-        from ..summarizers import GeminiClient, GithubSummarizer
+        from ..summarizers import ZhipuClient, GithubSummarizer
         from ..fetchers import GithubTrendingFetcher
         from ..processors import MarkdownFormatter
 
-        self.client = client or GeminiClient()
+        self.client = client or ZhipuClient(
+            model=config.GLM_MODEL,
+            api_key=config.GLM_API_KEY,
+            base_url=config.GLM_BASE_URL,
+            max_tokens=config.GLM_MAX_TOKENS,
+            enable_thinking=config.GLM_ENABLE_THINKING,
+        )
         self.fetcher = GithubTrendingFetcher(data_dir=self.project_root / "data")
         self.summarizer = None  # Created with date in summarize()
         self.formatter = MarkdownFormatter()

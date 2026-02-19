@@ -28,19 +28,30 @@ from src.processors.llm_deduplicator import LLMDeduplicator
 from src.processors.formatter import MarkdownFormatter
 
 # 配置
-ZHIPU_MODEL = "glm-4.7-flash"
-ENABLE_THINKING = True
+ZHIPU_MODEL = "glm-4.7"  # 使用新的 GLM-5 模型
 MAX_TOKENS = 65536
-DELAY_BETWEEN_REQUESTS = 2.0  # GLM API 请求间隔
+DELAY_BETWEEN_REQUESTS = 3.0  # GLM API 请求间隔
 
 
 def load_articles_from_backup(date: str) -> list:
     """从备份的 daily_report.md 解析文章（作为后备方案）"""
-    backup_path = PROJECT_ROOT / "output" / f"{date}-backup" / "daily_report.md"
+    # 尝试多个可能的备份路径
+    possible_paths = [
+        PROJECT_ROOT / "output" / f"{date}-backup" / "daily_report.md",
+        PROJECT_ROOT / "output" / date / "daily_report.md",
+    ]
 
-    if not backup_path.exists():
-        print(f"❌ 找不到备份文件: {backup_path}")
+    backup_path = None
+    for path in possible_paths:
+        if path.exists():
+            backup_path = path
+            break
+
+    if not backup_path:
+        print(f"❌ 找不到备份文件，尝试过: {possible_paths}")
         return []
+
+    print(f"  📂 使用备份: {backup_path}")
 
     with open(backup_path, "r", encoding="utf-8") as f:
         content = f.read()
@@ -237,21 +248,21 @@ def main():
     date = args.date
 
     print("=" * 60)
-    print(f"🧪 Zhipu GLM 4.7 Flash 公众号文章处理测试")
+    print(f"🧪 Zhipu GLM-5 公众号文章处理测试")
     print(f"📅 日期: {date}")
     print("=" * 60)
 
     # Initialize Zhipu client
     print("\n📦 初始化 ZhipuClient...")
     print(f"   模型: {ZHIPU_MODEL}")
-    print(f"   Thinking 模式: {'启用' if ENABLE_THINKING else '禁用'}")
+    print(f"   Temperature: 1.0")
     print(f"   Max Tokens: {MAX_TOKENS}")
 
     try:
         client = ZhipuClient(
             model=ZHIPU_MODEL,
-            enable_thinking=ENABLE_THINKING,
             max_tokens=MAX_TOKENS,
+            enable_thinking=False,
         )
         print("✅ ZhipuClient 初始化成功")
     except ValueError as e:

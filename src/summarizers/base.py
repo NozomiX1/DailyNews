@@ -17,7 +17,7 @@ class BaseSummarizer(ABC):
         Initialize the summarizer.
 
         Args:
-            client: LLM client instance (e.g., GeminiClient)
+            client: LLM client instance (e.g., ZhipuClient)
         """
         self.client = client
 

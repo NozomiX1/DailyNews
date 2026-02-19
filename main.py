@@ -33,7 +33,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.tasks import WechatArticleTask, GithubTrendingTask, PapersTask
 from src.tasks.paper_analysis import PaperAnalysisTask
-from src.summarizers import GeminiClient
+from src.summarizers import ZhipuClient
 import config
 
 
@@ -79,7 +79,13 @@ def run_pipeline(date: str, tasks_to_run: list):
     print("=" * 60)
 
     # 初始化共享组件
-    client = GeminiClient()
+    client = ZhipuClient(
+        model=config.GLM_MODEL,
+        api_key=config.GLM_API_KEY,
+        base_url=config.GLM_BASE_URL,
+        max_tokens=config.GLM_MAX_TOKENS,
+        enable_thinking=config.GLM_ENABLE_THINKING,
+    )
     output_dir = PROJECT_ROOT / "output" / date
 
     # 根据任务标志创建任务实例
@@ -138,7 +144,13 @@ def run_paper_analysis_pipeline(
     print("=" * 80)
 
     # 初始化组件
-    client = GeminiClient(model="gemini-3-pro-high")
+    client = ZhipuClient(
+        model=config.GLM_MODEL,
+        api_key=config.GLM_API_KEY,
+        base_url=config.GLM_BASE_URL,
+        max_tokens=config.GLM_MAX_TOKENS,
+        enable_thinking=config.GLM_ENABLE_THINKING,
+    )
     output_dir = PROJECT_ROOT / "output" / target_date
 
     # 创建任务实例

@@ -16,7 +16,7 @@ class LLMDeduplicator:
         Initialize LLM deduplicator.
 
         Args:
-            client: GeminiClient instance
+            client: ZhipuClient instance
         """
         from prompts import DeduplicationPrompt
         self.client = client

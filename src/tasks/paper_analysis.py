@@ -1,5 +1,5 @@
 # PaperAnalysisTask
-# Task for deep paper analysis with PDF download and Gemini analysis
+# Task for deep paper analysis with PDF download and GLM analysis
 from typing import List, Dict, Any
 from pathlib import Path
 from datetime import datetime, timedelta as dt
@@ -10,6 +10,7 @@ import time
 from .base import BaseTask
 from .papers import is_weekend
 from prompts import PaperPrompt
+import config
 
 
 class PaperAnalysisTask(BaseTask):
@@ -19,7 +20,7 @@ class PaperAnalysisTask(BaseTask):
     This task:
     - Fetches paper rankings from HuggingFace
     - Downloads full ArXiv PDFs
-    - Analyzes each paper with Gemini using PDF upload
+    - Analyzes each paper with GLM
     - Generates detailed analysis notes
     """
 
@@ -38,7 +39,7 @@ class PaperAnalysisTask(BaseTask):
         Initialize paper analysis task.
 
         Args:
-            client: GeminiClient instance
+            client: ZhipuClient instance
             output_dir: Output directory for generated files
             project_root: Project root directory
             min_papers: Minimum number of papers to download
@@ -47,11 +48,17 @@ class PaperAnalysisTask(BaseTask):
         """
         super().__init__(output_dir, project_root)
 
-        from ..summarizers import GeminiClient
+        from ..summarizers import ZhipuClient
         from ..fetchers import PapersFetcher
         from ..utils.paper_ranker import PaperRanker
 
-        self.client = client or GeminiClient(model="gemini-3-pro-high")
+        self.client = client or ZhipuClient(
+            model=config.GLM_MODEL,
+            api_key=config.GLM_API_KEY,
+            base_url=config.GLM_BASE_URL,
+            max_tokens=config.GLM_MAX_TOKENS,
+            enable_thinking=config.GLM_ENABLE_THINKING,
+        )
         self.fetcher = PapersFetcher(data_dir=self.project_root / "data")
         self.ranker = PaperRanker(enable_topic_bonus=enable_topic_bonus)
         self.min_papers = min_papers

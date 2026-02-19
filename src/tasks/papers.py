@@ -5,6 +5,7 @@ from pathlib import Path
 from datetime import datetime
 
 from .base import BaseTask
+import config
 
 
 def is_weekend(date_str: str) -> bool:
@@ -32,18 +33,24 @@ class PapersTask(BaseTask):
         Initialize papers task.
 
         Args:
-            client: GeminiClient instance
+            client: ZhipuClient instance
             output_dir: Output directory for generated files
             project_root: Project root directory
         """
         super().__init__(output_dir, project_root)
 
-        from ..summarizers import GeminiClient, PaperSummarizer
+        from ..summarizers import ZhipuClient, PaperSummarizer
         from ..fetchers import PapersFetcher
         from ..processors import MarkdownFormatter
 
 
-        self.client = client or GeminiClient()
+        self.client = client or ZhipuClient(
+            model=config.GLM_MODEL,
+            api_key=config.GLM_API_KEY,
+            base_url=config.GLM_BASE_URL,
+            max_tokens=config.GLM_MAX_TOKENS,
+            enable_thinking=config.GLM_ENABLE_THINKING,
+        )
         self.fetcher = PapersFetcher(data_dir=self.project_root / "data")
         self.summarizer = PaperSummarizer(self.client)
         self.formatter = MarkdownFormatter()

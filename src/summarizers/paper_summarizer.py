@@ -1,5 +1,5 @@
 # Paper Summarizer
-# Analyze academic papers using Gemini
+# Analyze academic papers using GLM
 import json
 import re
 import time
@@ -7,7 +7,7 @@ from typing import Dict, Any, List
 from pathlib import Path
 
 from .base import BaseSummarizer
-from .gemini_client import GeminiClient
+from .zhipu_client import ZhipuClient
 from prompts.paper import PaperPrompt
 from prompts.paper_summary import PaperSummaryPrompt
 
@@ -15,12 +15,12 @@ from prompts.paper_summary import PaperSummaryPrompt
 class PaperSummarizer(BaseSummarizer):
     """Summarizer for academic papers (requires PDF analysis)."""
 
-    def __init__(self, client: GeminiClient, prompt_path: str = None, load_full_prompt: bool = False):
+    def __init__(self, client: ZhipuClient, prompt_path: str = None, load_full_prompt: bool = False):
         """
         Initialize paper summarizer.
 
         Args:
-            client: GeminiClient instance
+            client: ZhipuClient instance
             prompt_path: Path to prompt.md file
             load_full_prompt: Whether to load full prompt (for PDF analysis). Default False.
         """
