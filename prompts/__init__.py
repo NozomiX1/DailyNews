@@ -10,3 +10,4 @@ from .github import GithubPrompt
 from .paper import PaperPrompt
 from .paper_summary import PaperSummaryPrompt
 from .deduplication import DeduplicationPrompt
+from .hackernews import HackerNewsPrompt
