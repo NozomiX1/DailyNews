@@ -13,5 +13,8 @@ markdownify>=0.11.6
 # 环境变量管理
 python-dotenv>=1.0.0
 
+# OpenAI SDK (zhipu_client 使用)
+openai>=1.0.0
+
 # 智谱 AI (LLM 总结与分析)
 zhipuai>=2.0.0
