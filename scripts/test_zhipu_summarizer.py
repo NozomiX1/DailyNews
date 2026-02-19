@@ -20,6 +20,12 @@ from src.summarizers.zhipu_client import ZhipuClient
 from src.summarizers.article_summarizer import ArticleSummarizer
 
 
+# 配置：启用 thinking 模式和 max_tokens
+ZHIPU_MODEL = "glm-4.7-flash"
+ENABLE_THINKING = True
+MAX_TOKENS = 65536
+
+
 def get_test_articles():
     """Get test articles from yesterday's daily report."""
     # Use yesterday's backup report
@@ -92,8 +98,15 @@ def main():
 
     # Initialize Zhipu client
     print("\n📦 初始化 ZhipuClient...")
+    print(f"   模型: {ZHIPU_MODEL}")
+    print(f"   Thinking 模式: {'启用' if ENABLE_THINKING else '禁用'}")
+    print(f"   Max Tokens: {MAX_TOKENS}")
     try:
-        client = ZhipuClient(model="glm-4-flash")
+        client = ZhipuClient(
+            model=ZHIPU_MODEL,
+            enable_thinking=ENABLE_THINKING,
+            max_tokens=MAX_TOKENS,
+        )
         print("✅ ZhipuClient 初始化成功")
     except ValueError as e:
         print(f"❌ 初始化失败: {e}")

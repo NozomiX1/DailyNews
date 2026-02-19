@@ -13,18 +13,24 @@ class ZhipuClient:
 
     def __init__(
         self,
-        model: str = "glm-4-flash",
+        model: str = "glm-4.7-flash",
         api_key: str = None,
+        enable_thinking: bool = True,
+        max_tokens: int = 65536,
     ):
         """
         Initialize Zhipu client.
 
         Args:
-            model: Model name (default: glm-4-flash)
+            model: Model name (default: glm-4.7-flash)
             api_key: API key for authentication (reads from ZHIPU_API_KEY env var if not provided)
+            enable_thinking: Enable thinking/reasoning mode (default: True)
+            max_tokens: Maximum tokens in response (default: 65536)
         """
         self.model = model
         self.api_key = api_key or os.environ.get("ZHIPU_API_KEY")
+        self.enable_thinking = enable_thinking
+        self.max_tokens = max_tokens
 
         if not self.api_key:
             raise ValueError(
@@ -68,7 +74,12 @@ class ZhipuClient:
             ],
             "stream": False,
             "temperature": temperature,
+            "max_tokens": self.max_tokens,
         }
+
+        # Add thinking mode if enabled
+        if self.enable_thinking:
+            payload["thinking"] = {"type": "enabled"}
 
         for attempt in range(max_retries + 1):
             try:
