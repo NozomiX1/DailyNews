@@ -93,18 +93,24 @@ class LLMDeduplicator:
             deduplicated = [item for i, item in enumerate(items) if i not in duplicate_indices]
 
             # Also remove articles with score == 1
-            before_filter_count = len(deduplicated)
-            deduplicated = [item for item in deduplicated if item.get("score", 0) != 1]
-            removed_count = before_filter_count - len(deduplicated)
-            if removed_count > 0:
-                print(f"    [删除] {removed_count} 篇 score=1 的文章")
+            filtered = []
+            for item in deduplicated:
+                if item.get("score", 0) == 1:
+                    title = item.get("title", item.get("original_title", ""))[:50]
+                    print(f"    [删除] 低分文章: {title}...")
+                else:
+                    filtered.append(item)
+            deduplicated = filtered
 
             # Filter out advertisements
-            before_filter_count = len(deduplicated)
-            deduplicated = [item for item in deduplicated if not item.get("is_ad", False)]
-            removed_count = before_filter_count - len(deduplicated)
-            if removed_count > 0:
-                print(f"    [删除] {removed_count} 篇广告文章")
+            filtered = []
+            for item in deduplicated:
+                if item.get("is_ad", False):
+                    title = item.get("title", item.get("original_title", ""))[:50]
+                    print(f"    [删除] 广告文章: {title}...")
+                else:
+                    filtered.append(item)
+            deduplicated = filtered
 
             # Save results to JSON if output_path is provided
             if output_path:

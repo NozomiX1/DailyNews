@@ -13,17 +13,22 @@ class PaperRanker:
 
     # 超级实验室 (持续发布模型、刷榜的顶级实验室) - +50 分
     SUPER_LABS = [
-        r"\bOpenAI\b",           # GPT系列
-        r"\bAnthropic\b",         # Claude系列
-        r"Google DeepMind|DeepMind",  # Gemini, AlphaFold
-        r"\bDeepSeek\b",          # V3, R1...
-        r"\bQwen\b",              # 通义千问
-        r"\bMoonshot\b",          # Kimi (月之暗面)
-        r"\bMistral\b",           # Mistral AI
-        r"\bMeta AI\b",           # LLaMA系列
-        r"01\.AI|零一万物|Zhipu",  # 智谱 AI / Zhipu AI
-        r"\bByteDance\b",         # 豆包
-        r"\bBaichuan\b",          # 百川智能
+        r"\bOpenAI\b",           
+        r"\bAnthropic\b",         
+        r"Google DeepMind|DeepMind",  
+        r"\bDeepSeek\b",          
+        r"\bQwen\b|\bTongyi\b|\b通义\b|\bTongyi Qianwen\b|\bTongyi Lab\b",  # ← 新增：tongyi 全覆盖（超级重要）
+        r"\bMoonshot\b",          
+        r"\bMistral\b",           
+        r"\bMeta AI\b",           
+        r"01\.AI|零一万物|Zhipu",  
+        r"\bByteDance\b",         
+
+
+        # 2025-2026 新刷榜势力（保持不变）
+        r"\bxAI\b",               
+        r"\bMiniMax\b|\b海螺AI\b", 
+        r"\bStepFun\b|\b阶跃星辰\b",
     ]
 
     # Frontier 实验室 (顶级研究机构) - +20 分
@@ -33,8 +38,49 @@ class PaperRanker:
         r"DeepSeek", r"Qwen", r"Mistral", r"Moonshot",
         r"01\.AI|Zhipu", r"ByteDance", r"Baichuan",
         r"Stanford", r"Berkeley", r"MIT", r"CMU",
-        r"OpenAI", r"Tsinghua", r"Peking University",
-        r"Huawei", r"Baidu", r"SenseTime"
+        r"OpenAI", r"Tsinghua", r"Peking University|北京大学",
+        r"Huawei", r"Baidu", r"SenseTime", r"\bBaichuan\b",
+
+        # 新增公司（2026仍在高产高质量论文）
+        r"Alibaba|Tongyi|通义|Tongyi Qianwen|Tongyi Lab",  # ← 同步增强 tongyi
+        r"\bMeituan\b|\b美团\b|\bLongCat\b|\blongcat\b|\bmeituan-longcat\b|LongCat Team|Meituan LongCat",
+        r"\bAmazon\b|\bAWS\b", 
+        r"\bApple\b", 
+        r"\bIBM\b", 
+        r"\bAdobe\b", 
+        r"\biFlytek\b|\b科大讯飞\b", 
+        r"\bXiaomi\b|\b小米\b", 
+        r"\bMeituan\b|\b美团\b",
+        r"\bBAAI\b|\b北京智源\b|\b北京人工智能研究院\b",  # 北京智源
+        r"\bShanghai AI Laboratory\b|\b上海人工智能实验室\b",
+        r"\bPeng Cheng Laboratory\b|\b鹏城实验室\b",
+        r"\bZhejiang Lab\b",
+
+        # 新增顶尖大学（US News + arXiv高产机构）
+        r"\bHarvard\b|\b哈佛大学\b",
+        r"\bPrinceton\b|\b普林斯顿大学\b",
+        r"\bCaltech\b|\b加州理工\b",
+        r"\bUCLA\b|\bUCSD\b|\bUC San Diego\b",
+        r"\bNYU\b|\bNew York University\b|\b纽约大学\b",
+        r"\bColumbia\b|\b哥伦比亚大学\b",
+        r"\bUniversity of Washington\b|\bUW\b|\b华盛顿大学\b",
+        r"\bUIUC\b|\bIllinois\b|\b伊利诺伊大学\b",
+        r"\bGeorgia Tech\b|\b佐治亚理工\b",
+        r"\bUniversity of Toronto\b|\b多伦多大学\b",
+        r"\bMila\b|\bVector Institute\b",  # 加拿大Mila/Vector
+        r"\bOxford\b|\b牛津大学\b",
+        r"\bCambridge\b|\b剑桥大学\b",
+        r"\bETH Zurich\b|\b苏黎世联邦理工\b",
+        r"\bEPFL\b|\b洛桑联邦理工\b",
+        r"\bZhejiang University\b|\b浙江大学\b",
+        r"\bShanghai Jiao Tong\b|\bSJTU\b|\b上海交通大学\b",
+        r"\bUSTC\b|\b中国科学技术大学\b|\b科大\b",
+        r"\bFudan\b|\b复旦大学\b",
+
+        # 其他强力研究机构（常与大厂合作发顶会论文）
+        r"\bAllen Institute for AI\b|\bAI2\b",
+        r"\bHugging Face\b",      # HF自己的论文质量很高，建议加
+        r"\bTII\b|\bTechnology Innovation Institute\b",  # Falcon模型
     ]
 
     # 兴趣关键词 (命中 +10 分)

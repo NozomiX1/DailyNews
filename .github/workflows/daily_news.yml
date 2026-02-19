@@ -28,8 +28,11 @@ jobs:
     - name: Install dependencies
       run: pip install -r requirements.txt
 
-    - name: Run DailyNews
-      run: python main.py
+    - name: Run WeChat and GitHub tasks
+      run: python main.py --wechat --github
+
+    - name: Run Papers task (yesterday)
+      run: python main.py --paper --date $(date -d "yesterday" +%Y-%m-%d)
 
     - name: Commit and push changes
       run: |
