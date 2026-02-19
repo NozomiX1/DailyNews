@@ -302,6 +302,13 @@ class WechatFetcher(BaseFetcher):
 
         print(f"\n✅ 爬取完成！共获取 {len(all_articles)} 篇文章")
 
+        # 检测 cookie 失效：所有公众号都没有文章时抛出异常
+        if len(all_articles) == 0:
+            raise RuntimeError(
+                "❌ 未获取到任何文章，极大概率是 Cookie 失效！"
+                "请检查 WECHAT_COOKIE 和 WECHAT_TOKEN 是否正确或已过期。"
+            )
+
         # Print data preview
         self._print_data_preview(all_articles, "微信文章")
 
