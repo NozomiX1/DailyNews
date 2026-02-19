@@ -31,7 +31,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.tasks import WechatArticleTask, GithubTrendingTask, PapersTask
+from src.tasks import WechatArticleTask, GithubTrendingTask, PapersTask, HackerNewsTask
 from src.tasks.paper_analysis import PaperAnalysisTask
 from src.summarizers import ZhipuClient
 import config
@@ -96,6 +96,8 @@ def run_pipeline(date: str, tasks_to_run: list):
         tasks.append(GithubTrendingTask(client=client, output_dir=output_dir))
     if 'paper' in tasks_to_run and not skip_papers:
         tasks.append(PapersTask(client=client, output_dir=output_dir))
+    if 'hackernews' in tasks_to_run:
+        tasks.append(HackerNewsTask(client=client, output_dir=output_dir))
 
     # 执行所有任务
     results = {}
@@ -223,6 +225,11 @@ Examples:
         help='运行 Papers 轻量汇总任务'
     )
     parser.add_argument(
+        '--hackernews',
+        action='store_true',
+        help='运行 Hacker News 任务'
+    )
+    parser.add_argument(
         '--analyze',
         action='store_true',
         help='运行 Paper Analysis 深度分析任务（需要多模态模型支持）'
@@ -257,6 +264,8 @@ Examples:
             tasks_to_run.append('github')
         if args.paper:
             tasks_to_run.append('paper')
+        if args.hackernews:
+            tasks_to_run.append('hackernews')
 
         # 如果没有指定任何任务标志，运行默认任务
         if not tasks_to_run:
