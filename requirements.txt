@@ -12,3 +12,6 @@ markdownify>=0.11.6
 
 # OpenAI SDK (zhipu_client 使用 OpenAI 兼容 API)
 openai>=1.0.0
+
+# Web crawling with browser automation
+crawl4ai>=0.4.0
