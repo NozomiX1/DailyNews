@@ -17,29 +17,44 @@ DATE_DIR_README_FILES = "readme_files"  # {date}/trending/readme_files/
 
 # ================= 微信配置 =================
 
-# 从环境变量读取 Cookie
-def load_cookie():
-    cookie = os.environ.get("WECHAT_COOKIE", "")
+# 微信管理平台 Token（从环境变量读取）
+TOKEN = os.environ.get("WECHAT_TOKEN", "")
+
+# Cookie (lazy load - only validates when accessed)
+_COOKIE = None
+
+def get_cookie():
+    """Get WeChat cookie, raising error only when actually needed."""
+    global _COOKIE
+    if _COOKIE is None:
+        _COOKIE = os.environ.get("WECHAT_COOKIE", "")
+    return _COOKIE
+
+def require_cookie():
+    """Get cookie with validation - call this when WeChat task is used."""
+    cookie = get_cookie()
     if not cookie:
         raise ValueError("WECHAT_COOKIE 环境变量未设置")
     return cookie
 
-# 微信管理平台 Token（从环境变量读取）
-TOKEN = os.environ.get("WECHAT_TOKEN", "")
-
-# Cookie
-COOKIE = load_cookie()
+# For backwards compatibility with existing imports
+COOKIE = property(get_cookie) if False else ""  # Placeholder, use get_cookie() instead
 
 # 目标公众号列表
 TARGET_ACCOUNTS = ["机器之心", "新智元", "量子位"]
 
-# 请求头
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Cookie": COOKIE,
-    "Referer": "https://mp.weixin.qq.com/cgi-bin/appmsg?t=media/appmsg_edit_v2&action=edit&isNew=1&type=10&createType=10&token=" + TOKEN + "&lang=zh_CN",
-    "X-Requested-With": "XMLHttpRequest"
-}
+# 请求头 (lazy load)
+def get_headers():
+    """Get WeChat API headers with cookie, only loaded when needed."""
+    return {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Cookie": get_cookie(),
+        "Referer": "https://mp.weixin.qq.com/cgi-bin/appmsg?t=media/appmsg_edit_v2&action=edit&isNew=1&type=10&createType=10&token=" + TOKEN + "&lang=zh_CN",
+        "X-Requested-With": "XMLHttpRequest"
+    }
+
+# For backwards compatibility
+HEADERS = None
 
 BASE_URL = "https://mp.weixin.qq.com"
 

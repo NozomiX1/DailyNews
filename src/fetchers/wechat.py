@@ -71,7 +71,7 @@ class WechatFetcher(BaseFetcher):
         }
 
         try:
-            resp = requests.get(url, headers=config.HEADERS, params=params)
+            resp = requests.get(url, headers=config.get_headers(), params=params)
             data = resp.json()
 
             if data.get("base_resp", {}).get("ret") != 0:
@@ -113,7 +113,7 @@ class WechatFetcher(BaseFetcher):
         }
 
         try:
-            resp = requests.get(url, headers=config.HEADERS, params=params)
+            resp = requests.get(url, headers=config.get_headers(), params=params)
             data = resp.json()
 
             if data.get("base_resp", {}).get("ret") != 0:

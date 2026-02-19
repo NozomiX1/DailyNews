@@ -19,11 +19,16 @@ class WeChatContentError(requests.exceptions.RequestException):
     """微信文章内容获取失败异常（触发重试）"""
     pass
 
-# 沿用配置中的 Headers
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Cookie": config.COOKIE
-}
+# 沿用配置中的 Headers (lazy load)
+def _get_headers():
+    """Get headers with cookie, only loaded when needed."""
+    return {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Cookie": config.get_cookie()
+    }
+
+# For backwards compatibility
+HEADERS = None
 
 
 @retry_on_request_error(max_retries=3, delay=2.0, backoff=2.0)
@@ -39,7 +44,7 @@ def parse_wechat_to_md(url: str) -> Optional[str]:
     """
     print(f"    📥 正在下载: {url}")
     try:
-        resp = requests.get(url, headers=HEADERS, timeout=30)
+        resp = requests.get(url, headers=_get_headers(), timeout=30)
         if resp.status_code != 200:
             raise WeChatContentError(f"HTTP {resp.status_code}")
 

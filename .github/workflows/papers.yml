@@ -1,0 +1,29 @@
+name: Papers Summary
+
+on:
+  schedule:
+    # UTC 3:17 = 北京时间 11:17
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+env:
+  GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - run: pip install -r requirements.txt
+    - run: python main.py --paper --date $(date -d "yesterday" +%Y-%m-%d)
+    - name: Commit and push
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add output/
+        git diff --quiet && git diff --staged --quiet || \
+          (git commit -m "chore: update papers summary $(date +%Y-%m-%d)" && \
+           git pull --rebase && git push)

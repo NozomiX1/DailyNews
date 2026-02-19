@@ -32,6 +32,11 @@ class WechatArticleTask(BaseTask):
         """
         super().__init__(output_dir, project_root)
 
+        # Validate WeChat credentials before initializing
+        config.require_cookie()
+        if not config.TOKEN:
+            raise ValueError("WECHAT_TOKEN 环境变量未设置")
+
         from ..summarizers import ZhipuClient, ArticleSummarizer
         from ..fetchers import WechatFetcher
         from ..processors import LLMDeduplicator, MarkdownFormatter
