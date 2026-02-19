@@ -294,6 +294,25 @@
                         </div>
                     </a>
 
+                    <a v-if="data.hackerNews" :href="`viewer.html?file=${datePath}/hacker_news.md`" target="_blank" class="article-item">
+                        <div class="article-meta">
+                            <span>{{ formattedDate }}</span>
+                            <span>COMMUNITY</span>
+                        </div>
+                        <div class="article-content">
+                            <h3 class="article-title">
+                                <span class="article-title-text">Hacker News Top Stories</span>
+                                <span class="article-arrow">→</span>
+                            </h3>
+                            <div class="article-excerpt">
+                                技术社区热议话题，开发者观点与行业趋势讨论。
+                            </div>
+                            <div class="article-tags">
+                                <span class="tag">#HN</span><span class="tag">#Tech</span>
+                            </div>
+                        </div>
+                    </a>
+
                     <!-- 论文笔记卡片 -->
                     <a v-for="note in data.paperNotes"
                        :key="note.id"
@@ -353,7 +372,7 @@
                 // 检查是否是 file:// 协议 (会导致 fetch 失败)
                 const isFileProtocol = window.location.protocol === 'file:';
 
-                const data = reactive({ report: null, trending: null, papers: null, paperNotes: [] });
+                const data = reactive({ report: null, trending: null, papers: null, hackerNews: null, paperNotes: [] });
 
                 // 计算路径：YYYY-MM-DD
                 const datePath = computed(() => {
@@ -370,7 +389,7 @@
                     });
                 });
 
-                const hasAnyData = computed(() => data.report || data.trending || data.papers || data.paperNotes.length > 0);
+                const hasAnyData = computed(() => data.report || data.trending || data.papers || data.hackerNews || data.paperNotes.length > 0);
 
                 // 渲染 Papers（含笔记链接）
                 const renderedPapers = computed(() => {
@@ -456,6 +475,7 @@
                     data.report = null;
                     data.trending = null;
                     data.papers = null;
+                    data.hackerNews = null;
                     data.paperNotes = [];
 
                     const baseUrl = `./output/${pathStr}`;
@@ -488,15 +508,17 @@
                     };
 
                     // 并发请求
-                    const [report, trending, papers] = await Promise.all([
+                    const [report, trending, papers, hackerNews] = await Promise.all([
                         fetchFile(`${baseUrl}/daily_report.md`),
                         fetchFile(`${baseUrl}/github_trending.md`),
-                        fetchFile(`${baseUrl}/papers/papers_summary.md`)
+                        fetchFile(`${baseUrl}/papers/papers_summary.md`),
+                        fetchFile(`${baseUrl}/hacker_news.md`)
                     ]);
 
                     data.report = report;
                     data.trending = trending;
                     data.papers = papers;
+                    data.hackerNews = hackerNews;
 
                     // 提取 arXiv ID 并获取论文笔记
                     if (papers) {
@@ -553,7 +575,7 @@
 
                 return {
                     currentDate, calendarRef, datePath, formattedDate, data, loading, hasAnyData,
-                    isFileProtocol, isLocal, adjustDate, renderedPapers
+                    isFileProtocol, isLocal, adjustDate, renderedPapers, hackerNews
                 };
             }
         });

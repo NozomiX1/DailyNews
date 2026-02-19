@@ -229,6 +229,7 @@ class HackerNewsTask(BaseTask):
                 score = item.get('score', 0)
                 comments_count = item.get('descendants', 0)
                 url = item.get('url', '')
+                story_id = item.get('id', '')
 
                 lines.append(f"### {i}. {title}")
                 lines.append(f"> Score: {score} | Comments: {comments_count}")
@@ -239,17 +240,27 @@ class HackerNewsTask(BaseTask):
                     lines.append(f"")
                     lines.append(f"**摘要**: {summary}")
 
-                # Key points
+                # Key points as bullet list
                 key_points = item.get('key_points', [])
                 if key_points:
                     lines.append(f"")
-                    lines.append(f"**关键点**: {' | '.join(key_points[:3])}")
+                    lines.append(f"**关键点**:")
+                    for point in key_points[:3]:
+                        lines.append(f"- {point}")
 
                 # Community sentiment
                 sentiment = item.get('community_sentiment', '')
                 if sentiment:
                     lines.append(f"")
                     lines.append(f"**社区观点**: {sentiment}")
+
+                # Links
+                lines.append(f"")
+                if url:
+                    lines.append(f"🔗 [原文]({url})")
+                if story_id:
+                    hn_url = f"https://news.ycombinator.com/item?id={story_id}"
+                    lines.append(f"💬 [评论区]({hn_url})")
 
                 # Article fetch status
                 if not item.get('article_fetched'):
