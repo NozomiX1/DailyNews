@@ -2,8 +2,8 @@ name: Hacker News Daily
 
 on:
   schedule:
-    # UTC 0:00 = 北京时间 8:00
-    - cron: '0 0 * * *'
+    # UTC 23:53 = 北京时间 7:53 (次日)
+    - cron: '53 23 * * *'
   workflow_dispatch:
 
 env:

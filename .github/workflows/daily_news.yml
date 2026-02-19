@@ -2,8 +2,8 @@ name: Daily News Generator
 
 on:
   schedule:
-    # 每天 UTC 15:00 运行（北京时间 23:00）
-    - cron: '0 15 * * *'
+    # UTC 14:47 = 北京时间 22:47
+    - cron: '47 14 * * *'
   workflow_dispatch:
     # 允许手动触发
 
