@@ -6,6 +6,7 @@ Orchestrates the complete pipeline for different content types:
 - GitHub Trending
 - Papers summary
 - Paper analysis
+- Hacker News
 """
 
 from .base import BaseTask
@@ -13,6 +14,7 @@ from .wechat import WechatArticleTask
 from .github import GithubTrendingTask
 from .papers import PapersTask
 from .paper_analysis import PaperAnalysisTask
+from .hackernews import HackerNewsTask
 
 __all__ = [
     "BaseTask",
@@ -20,4 +22,5 @@ __all__ = [
     "GithubTrendingTask",
     "PapersTask",
     "PaperAnalysisTask",
+    "HackerNewsTask",
 ]
