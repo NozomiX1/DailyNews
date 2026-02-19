@@ -13,6 +13,7 @@ Thumbs.db
 # Sensitive data
 cookie1.txt
 fakeid_cache.json
+.env
 
 # Data & Output
 data/

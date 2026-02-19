@@ -2,6 +2,13 @@
 import os
 from pathlib import Path
 
+# 加载 .env 文件（本地开发用）
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # ================= 项目路径 =================
 PROJECT_ROOT = Path(__file__).parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -19,8 +26,14 @@ DATE_DIR_README_FILES = "readme_files"  # {date}/trending/readme_files/
 
 # ================= 微信配置 =================
 
-# 从 cookie1.txt 读取 Cookie
+# 从环境变量或 cookie1.txt 读取 Cookie（环境变量优先）
 def load_cookie():
+    # 优先从环境变量读取
+    env_cookie = os.environ.get("WECHAT_COOKIE", "")
+    if env_cookie:
+        return env_cookie
+
+    # fallback 到本地文件
     cookie_path = PROJECT_ROOT / "cookie1.txt"
     try:
         with open(cookie_path, "r", encoding="utf-8") as f:
@@ -29,10 +42,11 @@ def load_cookie():
                 raise ValueError("cookie1.txt is empty")
             return cookie
     except FileNotFoundError:
-        raise FileNotFoundError("❌ 找不到 cookie1.txt 文件")
+        if not env_cookie:
+            raise FileNotFoundError("❌ 找不到 cookie1.txt 文件，请设置 WECHAT_COOKIE 环境变量或创建该文件")
 
-# 微信管理平台 Token
-TOKEN = "1428445068"
+# 微信管理平台 Token（从环境变量读取）
+TOKEN = os.environ.get("WECHAT_TOKEN", "")
 
 # Cookie
 COOKIE = load_cookie()
@@ -56,8 +70,8 @@ ENABLE_CACHE = False
 FAKEID_CACHE_FILE = PROJECT_ROOT / "fakeid_cache.json"
 
 # ================= GLM 模型配置 =================
-# API Key 从环境变量读取，请设置 ZHIPU_API_KEY 环境变量
-GLM_API_KEY = os.environ.get("ZHIPU_API_KEY")
+# API Key 从环境变量读取，支持 ZHIPU_API_KEY 或 GLM_API_KEY
+GLM_API_KEY = os.environ.get("ZHIPU_API_KEY") or os.environ.get("GLM_API_KEY")
 GLM_BASE_URL = "https://open.bigmodel.cn/api/coding/paas/v4"
 GLM_MODEL = "glm-4.7"  # 默认模型
 GLM_MAX_TOKENS = 65536
