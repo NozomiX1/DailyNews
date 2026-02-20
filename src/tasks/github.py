@@ -5,6 +5,7 @@ from pathlib import Path
 from datetime import datetime
 
 from .base import BaseTask
+from ..utils.stats import update_github_stats
 import config
 
 
@@ -140,5 +141,20 @@ class GithubTrendingTask(BaseTask):
         # Save to file
         output_path = self.output_dir / "github_trending.md"
         self.formatter.save(content, output_path)
+
+        # Collect and save statistics
+        total_stars_today = 0
+        for repo in items:
+            today_stars = repo.get('today_stars', repo.get('stars_period', 0))
+            if isinstance(today_stars, (int, float)):
+                total_stars_today += int(today_stars)
+            elif isinstance(today_stars, str):
+                # Handle string format like "3384"
+                try:
+                    total_stars_today += int(today_stars.replace(',', ''))
+                except ValueError:
+                    pass
+
+        update_github_stats(self.output_dir, total_stars_today, len(items))
 
         return content
