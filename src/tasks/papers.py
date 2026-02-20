@@ -5,6 +5,7 @@ from pathlib import Path
 from datetime import datetime
 
 from .base import BaseTask
+from ..utils.stats import update_paper_stats
 import config
 
 
@@ -178,6 +179,15 @@ class PapersTask(BaseTask):
         papers_output_dir.mkdir(parents=True, exist_ok=True)
         output_path = papers_output_dir / "papers_summary.md"
         self.formatter.save(content, output_path)
+
+        # Collect and save statistics
+        total_score = 0.0
+        for paper in items:
+            score = paper.get('score', paper.get('rank_score', 0))
+            if isinstance(score, (int, float)):
+                total_score += score
+
+        update_paper_stats(self.output_dir, total_score, len(items))
 
         return content
 
