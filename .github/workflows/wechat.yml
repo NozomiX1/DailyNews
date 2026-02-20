@@ -2,8 +2,8 @@ name: WeChat Articles
 
 on:
   schedule:
-    # UTC 14:47 = 北京时间 22:47
-    - cron: '47 14 * * *'
+    # UTC 14:13 = 北京时间 22:13
+    - cron: '13 14 * * *'
   workflow_dispatch:
 
 env:
