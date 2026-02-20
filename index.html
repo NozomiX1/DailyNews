@@ -153,12 +153,12 @@
             
             <div class="grid grid-cols-3 gap-4 md:gap-8 mb-12">
                 <div class="p-5 rounded-xl bg-white border border-[var(--line-color)] shadow-sm hover:shadow-md transition-shadow">
-                     <div class="text-xs text-[var(--secondary-text)] uppercase font-bold tracking-wider mb-1">Total Papers</div>
-                    <div class="text-2xl md:text-3xl font-bold text-gray-900">DAILY</div>
+                     <div class="text-xs text-[var(--secondary-text)] uppercase font-bold tracking-wider mb-1">昨日论文得分</div>
+                    <div class="text-2xl md:text-3xl font-bold text-gray-900">{{ paperScore }}</div>
                 </div>
                 <div class="p-5 rounded-xl bg-white border border-[var(--line-color)] shadow-sm hover:shadow-md transition-shadow">
-                    <div class="text-xs text-[var(--secondary-text)] uppercase font-bold tracking-wider mb-1">Github Repos</div>
-                    <div class="text-2xl md:text-3xl font-bold text-gray-900">TREND</div>
+                    <div class="text-xs text-[var(--secondary-text)] uppercase font-bold tracking-wider mb-1">昨日新增 Star</div>
+                    <div class="text-2xl md:text-3xl font-bold text-gray-900">{{ githubStars }}</div>
                 </div>
                  <div class="p-5 rounded-xl bg-white border border-[var(--line-color)] shadow-sm hover:shadow-md transition-shadow">
                     <div class="text-xs text-[var(--secondary-text)] uppercase font-bold tracking-wider mb-1">Status</div>
@@ -373,6 +373,7 @@
                 const isFileProtocol = window.location.protocol === 'file:';
 
                 const data = reactive({ report: null, trending: null, papers: null, hackerNews: null, paperNotes: [] });
+                const stats = reactive({ papers: null, github: null });
 
                 // 计算路径：YYYY-MM-DD
                 const datePath = computed(() => {
@@ -390,6 +391,20 @@
                 });
 
                 const hasAnyData = computed(() => data.report || data.trending || data.papers || data.hackerNews || data.paperNotes.length > 0);
+
+                const paperScore = computed(() => {
+                    if (stats.papers && typeof stats.papers.total_score === 'number') {
+                        return stats.papers.total_score.toFixed(2);
+                    }
+                    return '--';
+                });
+
+                const githubStars = computed(() => {
+                    if (stats.github && typeof stats.github.total_stars_today === 'number') {
+                        return '+' + stats.github.total_stars_today.toLocaleString();
+                    }
+                    return '--';
+                });
 
                 // 渲染 Papers（含笔记链接）
                 const renderedPapers = computed(() => {
@@ -507,6 +522,16 @@
                         return null;
                     };
 
+                    const fetchStats = async (pathStr) => {
+                        try {
+                            const res = await fetch(`./output/${pathStr}/stats.json?t=${Date.now()}`);
+                            if (res.ok) {
+                                return await res.json();
+                            }
+                        } catch (e) {}
+                        return null;
+                    };
+
                     // 并发请求
                     const [report, trending, papers, hackerNews] = await Promise.all([
                         fetchFile(`${baseUrl}/daily_report.md`),
@@ -527,6 +552,16 @@
                             arxivIds.map(id => fetchPaperNote(pathStr, id))
                         );
                         data.paperNotes = notes.filter(n => n !== null);
+                    }
+
+                    // Fetch stats
+                    const statsData = await fetchStats(pathStr);
+                    if (statsData) {
+                        stats.papers = statsData.papers || null;
+                        stats.github = statsData.github || null;
+                    } else {
+                        stats.papers = null;
+                        stats.github = null;
                     }
 
                     loading.value = false;
@@ -575,7 +610,7 @@
 
                 return {
                     currentDate, calendarRef, datePath, formattedDate, data, loading, hasAnyData,
-                    isFileProtocol, isLocal, adjustDate, renderedPapers
+                    isFileProtocol, isLocal, adjustDate, renderedPapers, stats, paperScore, githubStars
                 };
             }
         });
