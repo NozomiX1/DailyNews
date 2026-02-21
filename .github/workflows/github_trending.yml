@@ -2,8 +2,8 @@ name: GitHub Trending
 
 on:
   schedule:
-    # UTC 1:31 = 北京时间 9:31
-    - cron: '31 1 * * *'
+    # UTC 0:31 = 北京时间 8:31
+    - cron: '31 0 * * *'
   workflow_dispatch:
 
 env:
