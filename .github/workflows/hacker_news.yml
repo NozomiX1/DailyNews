@@ -2,11 +2,12 @@ name: Hacker News Daily
 
 on:
   schedule:
-    # UTC 23:53 = 北京时间 7:53 (次日)
-    - cron: '53 23 * * *'
+    # UTC 1:23 = 北京时间 9:23
+    - cron: '23 1 * * *'
   workflow_dispatch:
 
 env:
+  TZ: Asia/Shanghai
   GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
 
 jobs:
@@ -42,7 +43,7 @@ jobs:
       run: python -m playwright install chromium --with-deps
 
     - name: Run Hacker News task
-      run: python main.py --hackernews
+      run: python main.py --hackernews --date $(date -d "yesterday" +%Y-%m-%d)
 
     - name: Commit and push changes
       run: |

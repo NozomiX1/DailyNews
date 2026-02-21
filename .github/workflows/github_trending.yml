@@ -2,11 +2,12 @@ name: GitHub Trending
 
 on:
   schedule:
-    # UTC 14:31 = 北京时间 22:31
-    - cron: '31 14 * * *'
+    # UTC 1:31 = 北京时间 9:31
+    - cron: '31 1 * * *'
   workflow_dispatch:
 
 env:
+  TZ: Asia/Shanghai
   GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
 
 jobs:
@@ -18,7 +19,7 @@ jobs:
       with:
         python-version: '3.11'
     - run: pip install -r requirements.txt
-    - run: python main.py --github
+    - run: python main.py --github --date $(date -d "yesterday" +%Y-%m-%d)
     - name: Commit and push
       run: |
         git config user.name "github-actions[bot]"

@@ -79,6 +79,7 @@ class HackerNewsSummarizer(BaseSummarizer):
                 'url': story.get('url', ''),
                 'by': story.get('by', 'unknown'),
                 'article_fetched': bool(article_content),
+                'comments': comments,
             })
 
             return result

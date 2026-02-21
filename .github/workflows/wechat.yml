@@ -2,11 +2,12 @@ name: WeChat Articles
 
 on:
   schedule:
-    # UTC 14:13 = 北京时间 22:13
-    - cron: '13 14 * * *'
+    # UTC 19:17 = 北京时间 3:17 (次日)
+    - cron: '17 19 * * *'
   workflow_dispatch:
 
 env:
+  TZ: Asia/Shanghai
   WECHAT_COOKIE: ${{ secrets.WECHAT_COOKIE }}
   WECHAT_TOKEN: ${{ secrets.WECHAT_TOKEN }}
   GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
@@ -20,7 +21,7 @@ jobs:
       with:
         python-version: '3.11'
     - run: pip install -r requirements.txt
-    - run: python main.py --wechat
+    - run: python main.py --wechat --date $(date -d "yesterday" +%Y-%m-%d)
     - name: Commit and push
       run: |
         git config user.name "github-actions[bot]"

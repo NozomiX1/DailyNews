@@ -7,6 +7,7 @@ on:
   workflow_dispatch:
 
 env:
+  TZ: Asia/Shanghai
   GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
 
 jobs:

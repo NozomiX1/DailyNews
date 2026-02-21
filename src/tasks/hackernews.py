@@ -3,13 +3,9 @@
 Hacker News Task
 
 Orchestrates HN story fetching, article crawling, and summarization.
-
-Note: Output is organized by yesterday's date since the 8am (Beijing) crawl
-captures stories from the previous day.
 """
 from typing import List, Dict, Any
 from pathlib import Path
-from datetime import datetime, timedelta
 
 from .base import BaseTask
 import config
@@ -48,29 +44,6 @@ class HackerNewsTask(BaseTask):
         self.summarizer = HackerNewsSummarizer(self.client)
         self.formatter = MarkdownFormatter()
         self.limit = limit
-
-    def run(self, date: str) -> Dict[str, Any]:
-        """
-        Execute the complete task workflow using yesterday's date.
-
-        HN task runs at 8am Beijing time, so output is organized by
-        the previous day's date (the stories being crawled).
-
-        Args:
-            date: Current date string (will be adjusted to yesterday)
-
-        Returns:
-            Result dictionary with task status
-        """
-        # Use yesterday's date for output
-        current_date = datetime.strptime(date, '%Y-%m-%d')
-        yesterday = (current_date - timedelta(days=1)).strftime('%Y-%m-%d')
-
-        # Update output_dir to use yesterday's date
-        self.output_dir = self.project_root / "output" / yesterday
-
-        # Call parent run with yesterday's date
-        return super().run(yesterday)
 
     def fetch(self, date: str) -> List[Dict[str, Any]]:
         """

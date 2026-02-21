@@ -2,7 +2,6 @@
 # Task for fetching, summarizing, and formatting GitHub Trending repositories
 from typing import List, Dict, Any
 from pathlib import Path
-from datetime import datetime
 
 from .base import BaseTask
 from ..utils.stats import update_github_stats
@@ -50,16 +49,15 @@ class GithubTrendingTask(BaseTask):
 
     def should_skip(self, date: str) -> bool:
         """
-        Skip if date is not today (GitHub Trending only works for current date).
+        Never skip - allow processing for any date.
 
         Args:
             date: Date string in YYYY-MM-DD format
 
         Returns:
-            True if should skip, False otherwise
+            False always
         """
-        today = datetime.now().strftime('%Y-%m-%d')
-        return date != today
+        return False
 
     def fetch(self, date: str) -> List[Dict[str, Any]]:
         """
