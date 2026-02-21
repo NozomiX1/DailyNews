@@ -56,8 +56,6 @@ def run_pipeline(date: str, tasks_to_run: list):
         date: 目标日期 (YYYY-MM-DD)
         tasks_to_run: 要运行的任务列表，包含 'wechat', 'github', 'paper'
     """
-    today = datetime.now().strftime('%Y-%m-%d')
-
     # 判断星期几
     weekday_names = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
     weekday_idx = get_weekday(date)
@@ -65,9 +63,6 @@ def run_pipeline(date: str, tasks_to_run: list):
 
     # 判断是否跳过论文（周末）
     skip_papers = is_weekend(date)
-
-    # 判断是否跳过 Trending（只能爬取当天）
-    skip_trending = (date != today)
 
     print("=" * 60)
     print(f"DailyNews Pipeline - {date} ({weekday_name})")
@@ -92,7 +87,7 @@ def run_pipeline(date: str, tasks_to_run: list):
     tasks = []
     if 'wechat' in tasks_to_run:
         tasks.append(WechatArticleTask(client=client, output_dir=output_dir))
-    if 'github' in tasks_to_run and not skip_trending:
+    if 'github' in tasks_to_run:
         tasks.append(GithubTrendingTask(client=client, output_dir=output_dir))
     if 'paper' in tasks_to_run and not skip_papers:
         tasks.append(PapersTask(client=client, output_dir=output_dir))
