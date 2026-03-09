@@ -66,7 +66,7 @@ FAKEID_CACHE_FILE = PROJECT_ROOT / "fakeid_cache.json"
 # ================= GLM 模型配置 =================
 # API Key 从环境变量读取，支持 ZHIPU_API_KEY 或 GLM_API_KEY
 GLM_API_KEY = os.environ.get("ZHIPU_API_KEY") or os.environ.get("GLM_API_KEY")
-GLM_BASE_URL = "https://open.bigmodel.cn/api/coding/paas/v4"
-GLM_MODEL = "glm-4.7"  # 默认模型
+GLM_BASE_URL = "https://ark.cn-beijing.volces.com/api/coding"
+GLM_MODEL = "ark-code-latest"  # 默认模型
 GLM_MAX_TOKENS = 65536
 GLM_ENABLE_THINKING = True
